@@ -1,0 +1,52 @@
+# VS Code REST Client / IntelliJ HTTP Client 용 테스트 파일
+# @host = http://localhost:4000
+
+### 1. 회원가입
+POST http://localhost:4000/auth/signup
+Content-Type: application/json
+
+{
+  "email": "new@example.com",
+  "password": "pass12",
+  "name": "홍길동",
+  "phone": "010-0000-0000"
+}
+
+### 2. 로그인 → 토큰 복사해서 @token 에 넣을 것
+POST http://localhost:4000/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "password123"
+}
+
+### 아래부터는 로그인 후 발급받은 JWT 토큰을 @token에 넣어 사용
+@token = <여기에 토큰 붙여넣기>
+
+### 3. 영화 목록 (현재 상영작)
+GET http://localhost:4000/movies
+
+### 4. 영화 상세 + 스크리닝 목록
+GET http://localhost:4000/movies/1
+
+### 5. 상영 정보 + 전체 좌석 + 예매된 좌석 ID
+GET http://localhost:4000/screenings/1
+
+### 6. 예매 생성 (JWT 필요)
+POST http://localhost:4000/reservations
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "screeningId": 3,
+  "seatIds": [51, 52, 53]
+}
+
+### 7. 내 예매 내역 (JWT 필요)
+GET http://localhost:4000/reservations/me
+Authorization: Bearer {{token}}
+
+### 8. 예매 취소 (JWT 필요)
+PATCH http://localhost:4000/reservations/1/cancel
+Authorization: Bearer {{token}}
