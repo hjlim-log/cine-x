@@ -6,6 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { CouponsService } from '../coupons/coupons.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -14,6 +15,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly couponsService: CouponsService,
   ) {}
 
   async signup(dto: SignupDto) {
@@ -26,6 +28,8 @@ export class AuthService {
     const customer = await this.prisma.customer.create({
       data: { email: dto.email, password: hashed, name: dto.name, phone: dto.phone },
     });
+
+    await this.couponsService.issueWelcomeCoupons(customer.id);
 
     const token = this.sign(customer.id, customer.email);
     return { token };

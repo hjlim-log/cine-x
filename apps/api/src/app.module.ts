@@ -8,6 +8,8 @@ import { ScreeningsModule } from './screenings/screenings.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { CinemasModule } from './cinemas/cinemas.module';
 import { PaymentsModule } from './payments/payments.module';
+import { PricingModule } from './pricing/pricing.module';
+import { CouponsModule } from './coupons/coupons.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { PaymentsModule } from './payments/payments.module';
     ReservationsModule,
     CinemasModule,
     PaymentsModule,
+    PricingModule,
+    CouponsModule,
   ],
 })
 export class AppModule {}

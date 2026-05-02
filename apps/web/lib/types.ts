@@ -96,6 +96,7 @@ export type Reservation = {
   status: 'PENDING' | 'PAID' | 'CANCELLED' | 'EXPIRED' | 'FAILED';
   paymentKey?: string | null;
   paidAt?: string | null;
+  audienceCounts?: AudienceCounts | null;
   customerId: number;
   screeningId: number;
   createdAt: string;
@@ -106,6 +107,76 @@ export type Reservation = {
     movie: Movie;
     screen: Screen & { cinema: Cinema };
   };
+  couponUsage?: {
+    discountAmount: number;
+    userCoupon?: {
+      id: number;
+      coupon: { name: string; type: string };
+    };
+  } | null;
+};
+
+export type AudienceCounts = {
+  ADULT?: number;
+  TEEN?: number;
+  SENIOR?: number;
+  DISABLED?: number;
+  CHILD?: number;
+};
+
+export type PriceBreakdown = {
+  baseTotal: number;
+  seatBonus: number;
+  subtotal: number;
+  couponDiscount: number;
+  totalAmount: number;
+  details: {
+    audienceType: string;
+    count: number;
+    unitPrice: number;
+    subtotal: number;
+  }[];
+  seatDetails: {
+    seatId: number;
+    additionalPrice: number;
+  }[];
+  appliedCoupon?: {
+    userCouponId: number;
+    couponName: string;
+    type: string;
+    discountAmount: number;
+  };
+};
+
+export type Coupon = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  type: 'AMOUNT_DISCOUNT' | 'PERCENT_DISCOUNT' | 'FREE_TICKET';
+  value: number;
+  minPurchase: number;
+  maxDiscount: number | null;
+  validDays: number;
+  imageUrl: string | null;
+  bgColor: string | null;
+  isActive: boolean;
+};
+
+export type UserCoupon = {
+  id: number;
+  customerId: number;
+  couponId: number;
+  status: 'AVAILABLE' | 'USED' | 'EXPIRED' | 'RESERVED';
+  issuedAt: string;
+  expiresAt: string;
+  usedAt: string | null;
+  coupon: Coupon;
+  usage?: {
+    id: number;
+    discountAmount: number;
+    usedAt: string;
+  } | null;
 };
 
 export type CinemaListItem = Cinema & { screenCount: number };

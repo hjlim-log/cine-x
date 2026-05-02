@@ -8,20 +8,22 @@ datasource db {
 }
 
 model Cinema {
-  id        Int      @id @default(autoincrement())
-  name      String
-  address   String
-  region    String
-  screens   Screen[]
-  createdAt DateTime @default(now())
+  id              Int             @id @default(autoincrement())
+  name            String
+  address         String
+  region          String
+  screens         Screen[]
+  pricingPolicies PricingPolicy[]
+  createdAt       DateTime        @default(now())
 }
 
 model ScreenType {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique // "일반관", "샤롯데", "수퍼플렉스", "수퍼4D"
-  grade       String           // "일반관" or "스페셜관"
-  description String?
-  screens     Screen[]
+  id              Int             @id @default(autoincrement())
+  name            String          @unique // "일반관", "샤롯데", "수퍼플렉스", "수퍼4D"
+  grade           String                  // "일반관" or "스페셜관"
+  description     String?
+  screens         Screen[]
+  pricingPolicies PricingPolicy[]
 }
 
 model SeatType {
@@ -137,22 +139,26 @@ model Customer {
   name         String
   phone        String?
   reservations Reservation[]
+  coupons      UserCoupon[]
   createdAt    DateTime      @default(now())
 }
 
 model Reservation {
-  id          Int       @id @default(autoincrement())
-  orderId     String    @unique
-  totalAmount Int
-  status      String    // PENDING | PAID | CANCELLED | FAILED
-  paymentKey  String?
-  paidAt      DateTime?
-  customer    Customer  @relation(fields: [customerId], references: [id])
-  customerId  Int
-  screening   Screening @relation(fields: [screeningId], references: [id])
-  screeningId Int
-  tickets     Ticket[]
-  createdAt   DateTime  @default(now())
+  id                   Int                   @id @default(autoincrement())
+  orderId              String                @unique
+  totalAmount          Int
+  status               String                // PENDING | PAID | CANCELLED | FAILED
+  paymentKey           String?
+  paidAt               DateTime?
+  audienceCounts       Json?                 // { ADULT: 2, TEEN: 1, ... }
+  customer             Customer              @relation(fields: [customerId], references: [id])
+  customerId           Int
+  screening            Screening             @relation(fields: [screeningId], references: [id])
+  screeningId          Int
+  tickets              Ticket[]
+  couponUsage          CouponUsage?
+  partnerDiscountUsage PartnerDiscountUsage?
+  createdAt            DateTime              @default(now())
 }
 
 model Ticket {
@@ -164,4 +170,139 @@ model Ticket {
   seatId        Int
 
   @@unique([reservationId, seatId])
+}
+
+model PricingPolicy {
+  id           Int        @id @default(autoincrement())
+
+  cinema       Cinema?    @relation(fields: [cinemaId], references: [id])
+  cinemaId     Int?       // null이면 전체 영화관 공통
+
+  screenType   ScreenType @relation(fields: [screenTypeId], references: [id])
+  screenTypeId Int
+
+  format       String     // "2D" or "3D"
+  dayType      String     // "WEEKDAY" or "WEEKEND"
+  audienceType String     // "ADULT", "TEEN", "SENIOR", "DISABLED", "CHILD"
+
+  basePrice    Int        // 기본 요금 (원)
+
+  validFrom    DateTime   @default(now())
+  validTo      DateTime?  // null이면 무기한
+
+  isActive     Boolean    @default(true)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([cinemaId, screenTypeId, format, dayType, audienceType])
+  @@index([screenTypeId, format, dayType])
+}
+
+model Coupon {
+  id          Int          @id @default(autoincrement())
+
+  code        String       @unique
+  name        String
+  description String?
+
+  type        String       // "AMOUNT_DISCOUNT" | "PERCENT_DISCOUNT" | "FREE_TICKET"
+  value       Int          // AMOUNT: 원 / PERCENT: 1~100 / FREE_TICKET: 무료 좌석 수
+
+  minPurchase Int          @default(0)
+  maxDiscount Int?         // PERCENT 한정 최대 할인금액
+  validDays   Int          @default(90)
+
+  issuePolicy String       // "WELCOME" | "CODE" | "MANUAL" | "EVENT"
+
+  imageUrl    String?
+  bgColor     String?
+
+  isActive    Boolean      @default(true)
+  totalIssued Int          @default(0)
+
+  createdAt   DateTime     @default(now())
+
+  userCoupons UserCoupon[]
+
+  @@index([issuePolicy, isActive])
+}
+
+model UserCoupon {
+  id         Int          @id @default(autoincrement())
+
+  customer   Customer     @relation(fields: [customerId], references: [id])
+  customerId Int
+
+  coupon     Coupon       @relation(fields: [couponId], references: [id])
+  couponId   Int
+
+  status     String       @default("AVAILABLE")
+  // AVAILABLE | USED | EXPIRED | RESERVED
+
+  issuedAt   DateTime     @default(now())
+  expiresAt  DateTime
+  usedAt     DateTime?
+
+  usage      CouponUsage?
+
+  @@index([customerId, status])
+}
+
+model CouponUsage {
+  id             Int         @id @default(autoincrement())
+
+  userCoupon     UserCoupon  @relation(fields: [userCouponId], references: [id])
+  userCouponId   Int         @unique
+
+  reservation    Reservation @relation(fields: [reservationId], references: [id])
+  reservationId  Int         @unique
+
+  discountAmount Int
+
+  usedAt         DateTime    @default(now())
+}
+
+model PartnerDiscount {
+  id            Int      @id @default(autoincrement())
+
+  name          String   // "신한카드 영화 2,000원 할인"
+  partnerType   String   // "CARD" | "TELECOM" | "POINT" | "ETC"
+  partnerName   String   // "신한카드", "KT" 등
+  description   String?
+
+  discountMethod  String // "AMOUNT" | "PERCENT"
+  discountValue   Int    // AMOUNT: 원 / PERCENT: 1~100
+  maxDiscount     Int?   // PERCENT 한정 최대 할인
+  minPurchase     Int    @default(0)
+
+  validFrom   DateTime  @default(now())
+  validTo     DateTime?
+
+  combinableWithCoupon Boolean @default(true)
+
+  imageUrl  String?
+  bgColor   String?
+
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+
+  usages    PartnerDiscountUsage[]
+
+  @@index([partnerType, isActive])
+}
+
+model PartnerDiscountUsage {
+  id                Int             @id @default(autoincrement())
+
+  partnerDiscount   PartnerDiscount @relation(fields: [partnerDiscountId], references: [id])
+  partnerDiscountId Int
+
+  reservation       Reservation     @relation(fields: [reservationId], references: [id])
+  reservationId     Int             @unique
+
+  discountAmount    Int
+
+  usedAt            DateTime        @default(now())
 }

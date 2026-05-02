@@ -5,7 +5,19 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Spinner from '@/components/Spinner';
 import { getReservation } from '@/lib/api';
-import type { Reservation } from '@/lib/types';
+import type { Reservation, AudienceCounts } from '@/lib/types';
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  ADULT: '성인', TEEN: '청소년', SENIOR: '경로', DISABLED: '장애인', CHILD: '어린이',
+};
+
+function formatAudience(counts: AudienceCounts): string {
+  const parts = Object.entries(counts)
+    .filter(([, n]) => (n ?? 0) > 0)
+    .map(([k, n]) => `${AUDIENCE_LABELS[k] ?? k} ${n}명`);
+  const total = Object.values(counts).reduce((s, n) => s + (n ?? 0), 0);
+  return parts.join(', ') + ` (총 ${total}명)`;
+}
 
 function CompleteContent() {
   const searchParams = useSearchParams();
@@ -75,6 +87,15 @@ function CompleteContent() {
           />
           <Row label="상영 유형" value={screening.screenType} />
           <Row label="좌석" value={seats} />
+          {reservation.audienceCounts && (
+            <Row label="관람인원" value={formatAudience(reservation.audienceCounts)} />
+          )}
+          {reservation.couponUsage && reservation.couponUsage.discountAmount > 0 && (
+            <Row
+              label="쿠폰 할인"
+              value={`-${reservation.couponUsage.discountAmount.toLocaleString()}원 (${reservation.couponUsage.userCoupon?.coupon.name ?? '쿠폰'})`}
+            />
+          )}
           {reservation.paidAt && (
             <Row
               label="결제 시각"

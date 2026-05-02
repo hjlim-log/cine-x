@@ -161,7 +161,7 @@ function CastCard({ person }: { person: Person & { order: number } }) {
     <div className="shrink-0 w-24 text-center group cursor-default">
       <div className="relative w-20 h-20 mx-auto rounded-full overflow-hidden bg-zinc-800 mb-2 ring-2 ring-zinc-700 group-hover:ring-red-600 group-hover:scale-105 transition-all duration-200">
         <Image
-          src={person.profileUrl ?? 'https://placehold.co/100x100/27272a/71717a?text=No+Image'}
+          src={person.profileUrl ?? 'https://placehold.co/100x100/27272a/71717a.png?text=No+Image'}
           alt={person.name}
           fill
           className="object-cover"

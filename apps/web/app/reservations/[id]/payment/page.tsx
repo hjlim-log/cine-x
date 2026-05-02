@@ -4,9 +4,20 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk';
-import { getReservation } from '@/lib/api';
+import { getReservation, calculatePrice } from '@/lib/api';
 import Spinner from '@/components/Spinner';
-import type { Reservation } from '@/lib/types';
+import type { Reservation, AudienceCounts, PriceBreakdown } from '@/lib/types';
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  ADULT: '성인', TEEN: '청소년', SENIOR: '경로', DISABLED: '장애인', CHILD: '어린이',
+};
+
+function formatAudience(counts: AudienceCounts): string {
+  return Object.entries(counts)
+    .filter(([, n]) => (n ?? 0) > 0)
+    .map(([k, n]) => `${AUDIENCE_LABELS[k] ?? k} ${n}`)
+    .join(' · ');
+}
 
 const PENDING_TTL_MS = 10 * 60 * 1000;
 
@@ -30,6 +41,7 @@ export default function PaymentPage() {
   const [widgetReady, setWidgetReady] = useState(false);
   const [paying, setPaying] = useState(false);
   const [fetchError, setFetchError] = useState('');
+  const [breakdown, setBreakdown] = useState<PriceBreakdown | null>(null);
 
   const initialized = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,6 +99,26 @@ export default function PaymentPage() {
 
     return () => clearInterval(id);
   }, [pageState, reservation]);
+
+  // 가격 breakdown 조회 (쿠폰 포함)
+  useEffect(() => {
+    if (!reservation?.audienceCounts || !reservation.tickets.length) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    calculatePrice(
+      {
+        screeningId: reservation.screeningId,
+        seatIds: reservation.tickets.map((t) => t.seatId),
+        audienceCounts: reservation.audienceCounts,
+        ...(reservation.couponUsage?.userCoupon?.id
+          ? { userCouponId: reservation.couponUsage.userCoupon.id }
+          : {}),
+      },
+      token,
+    )
+      .then(setBreakdown)
+      .catch(() => {});
+  }, [reservation]);
 
   // 토스 위젯 초기화
   useEffect(() => {
@@ -225,6 +257,31 @@ export default function PaymentPage() {
         <h2 className="font-semibold text-sm text-zinc-400 mb-3">결제 정보</h2>
         <div className="space-y-2 text-sm">
           <InfoRow label="좌석" value={seats} />
+          {reservation.audienceCounts && (
+            <InfoRow label="관람인원" value={formatAudience(reservation.audienceCounts)} />
+          )}
+          {breakdown && (
+            <div className="space-y-1 pt-1 pb-1">
+              {breakdown.details.map((d) => (
+                <div key={d.audienceType} className="flex justify-between text-zinc-500 text-xs">
+                  <span>{AUDIENCE_LABELS[d.audienceType] ?? d.audienceType} {d.count}명 × {d.unitPrice.toLocaleString()}원</span>
+                  <span>{d.subtotal.toLocaleString()}원</span>
+                </div>
+              ))}
+              {breakdown.seatBonus > 0 && (
+                <div className="flex justify-between text-zinc-500 text-xs">
+                  <span>좌석 추가요금</span>
+                  <span>+{breakdown.seatBonus.toLocaleString()}원</span>
+                </div>
+              )}
+              {breakdown.couponDiscount > 0 && (
+                <div className="flex justify-between text-emerald-400 text-xs font-medium">
+                  <span>쿠폰 할인 ({breakdown.appliedCoupon?.couponName})</span>
+                  <span>-{breakdown.couponDiscount.toLocaleString()}원</span>
+                </div>
+              )}
+            </div>
+          )}
           <div className="border-t border-zinc-800 pt-2 flex justify-between font-bold text-base">
             <span>결제 금액</span>
             <span className="text-red-400">{reservation.totalAmount.toLocaleString()}원</span>

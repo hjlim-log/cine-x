@@ -6,7 +6,19 @@ import { useRouter } from 'next/navigation';
 import { getMyReservations, cancelReservation } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import Spinner from '@/components/Spinner';
-import type { Reservation } from '@/lib/types';
+import type { Reservation, AudienceCounts } from '@/lib/types';
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  ADULT: '성인', TEEN: '청소년', SENIOR: '경로', DISABLED: '장애인', CHILD: '어린이',
+};
+
+function formatAudience(counts: AudienceCounts): string {
+  const parts = Object.entries(counts)
+    .filter(([, n]) => (n ?? 0) > 0)
+    .map(([k, n]) => `${AUDIENCE_LABELS[k] ?? k} ${n}`);
+  const total = Object.values(counts).reduce((s, n) => s + (n ?? 0), 0);
+  return parts.join(' · ') + ` (${total}명)`;
+}
 
 type BadgeInfo = { text: string; cls: string };
 
@@ -66,7 +78,7 @@ export default function MyReservationsPage() {
   if (loading) return <Spinner />;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="py-2">
       <h1 className="text-2xl font-bold mb-6">내 예매 내역</h1>
 
       {reservations.length === 0 ? (
@@ -123,6 +135,9 @@ export default function MyReservationsPage() {
                     })}
                   </p>
                   <p className="text-zinc-300">좌석: {seats}</p>
+                  {r.audienceCounts && (
+                    <p className="text-zinc-400">관람인원: {formatAudience(r.audienceCounts)}</p>
+                  )}
                   <p className="text-red-400 font-semibold text-base pt-0.5">
                     {r.totalAmount.toLocaleString()}원
                   </p>

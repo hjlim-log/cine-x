@@ -3,6 +3,178 @@ import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+const PRICING_MATRIX: Record<string, Record<string, Record<string, Record<string, number>>>> = {
+  '일반관': {
+    '2D': {
+      WEEKDAY: { ADULT: 13000, TEEN: 10000, SENIOR: 8000, DISABLED: 8000, CHILD: 8000 },
+      WEEKEND: { ADULT: 15000, TEEN: 12000, SENIOR: 10000, DISABLED: 10000, CHILD: 10000 },
+    },
+    '3D': {
+      WEEKDAY: { ADULT: 16000, TEEN: 13000, SENIOR: 11000, DISABLED: 11000, CHILD: 11000 },
+      WEEKEND: { ADULT: 18000, TEEN: 15000, SENIOR: 13000, DISABLED: 13000, CHILD: 13000 },
+    },
+  },
+  '샤롯데': {
+    '2D': {
+      WEEKDAY: { ADULT: 35000, TEEN: 35000, SENIOR: 35000, DISABLED: 30000, CHILD: 35000 },
+      WEEKEND: { ADULT: 40000, TEEN: 40000, SENIOR: 40000, DISABLED: 35000, CHILD: 40000 },
+    },
+    '3D': {
+      WEEKDAY: { ADULT: 38000, TEEN: 38000, SENIOR: 38000, DISABLED: 33000, CHILD: 38000 },
+      WEEKEND: { ADULT: 43000, TEEN: 43000, SENIOR: 43000, DISABLED: 38000, CHILD: 43000 },
+    },
+  },
+  '수퍼플렉스': {
+    '2D': {
+      WEEKDAY: { ADULT: 18000, TEEN: 15000, SENIOR: 13000, DISABLED: 13000, CHILD: 13000 },
+      WEEKEND: { ADULT: 20000, TEEN: 17000, SENIOR: 15000, DISABLED: 15000, CHILD: 15000 },
+    },
+    '3D': {
+      WEEKDAY: { ADULT: 21000, TEEN: 18000, SENIOR: 16000, DISABLED: 16000, CHILD: 16000 },
+      WEEKEND: { ADULT: 23000, TEEN: 20000, SENIOR: 18000, DISABLED: 18000, CHILD: 18000 },
+    },
+  },
+  '수퍼4D': {
+    '2D': {
+      WEEKDAY: { ADULT: 20000, TEEN: 17000, SENIOR: 15000, DISABLED: 15000, CHILD: 15000 },
+      WEEKEND: { ADULT: 22000, TEEN: 19000, SENIOR: 17000, DISABLED: 17000, CHILD: 17000 },
+    },
+    '3D': {
+      WEEKDAY: { ADULT: 23000, TEEN: 20000, SENIOR: 18000, DISABLED: 18000, CHILD: 18000 },
+      WEEKEND: { ADULT: 25000, TEEN: 22000, SENIOR: 20000, DISABLED: 20000, CHILD: 20000 },
+    },
+  },
+};
+
+const COUPONS = [
+  {
+    code: 'WELCOME2026',
+    name: '신규 가입 환영 쿠폰',
+    description: '신규 가입 회원에게 드리는 3,000원 할인 쿠폰',
+    type: 'AMOUNT_DISCOUNT',
+    value: 3000,
+    minPurchase: 10000,
+    validDays: 90,
+    issuePolicy: 'WELCOME',
+    bgColor: '#dc2626',
+  },
+  {
+    code: 'MAY-PROMO',
+    name: '5월 가정의 달 10% 할인',
+    description: '5월 한정 모든 영화 10% 할인',
+    type: 'PERCENT_DISCOUNT',
+    value: 10,
+    minPurchase: 20000,
+    maxDiscount: 5000,
+    validDays: 30,
+    issuePolicy: 'CODE',
+    bgColor: '#f59e0b',
+  },
+  {
+    code: 'FREE-MOVIE',
+    name: '영화 무료 관람권',
+    description: '가장 비싼 좌석 1자리 무료 관람권',
+    type: 'FREE_TICKET',
+    value: 1,
+    validDays: 60,
+    issuePolicy: 'CODE',
+    bgColor: '#7c3aed',
+  },
+  {
+    code: 'STUDENT-30',
+    name: '학생 응원 쿠폰',
+    description: '학생 인증 회원에게 드리는 30% 할인 (최대 8,000원)',
+    type: 'PERCENT_DISCOUNT',
+    value: 30,
+    minPurchase: 15000,
+    maxDiscount: 8000,
+    validDays: 365,
+    issuePolicy: 'CODE',
+    bgColor: '#2563eb',
+  },
+  {
+    code: 'BIRTHDAY-GIFT',
+    name: '생일 축하 쿠폰',
+    description: '생일 달의 회원에게 드리는 5,000원 할인',
+    type: 'AMOUNT_DISCOUNT',
+    value: 5000,
+    minPurchase: 10000,
+    validDays: 30,
+    issuePolicy: 'CODE',
+    bgColor: '#db2777',
+  },
+  {
+    code: 'TWO-FREE',
+    name: '커플 무료 관람권',
+    description: '가장 비싼 좌석 2자리 무료 (커플석 추천!)',
+    type: 'FREE_TICKET',
+    value: 2,
+    validDays: 90,
+    issuePolicy: 'CODE',
+    bgColor: '#16a34a',
+  },
+];
+
+async function seedCoupons() {
+  for (const c of COUPONS) {
+    await prisma.coupon.upsert({ where: { code: c.code }, create: c, update: c });
+  }
+  console.log(`  Coupon ${COUPONS.length}개 생성`);
+
+  const testUser = await prisma.customer.findUnique({ where: { email: 'test@test.com' } });
+  if (!testUser) return;
+
+  const issueCodes = ['WELCOME2026', 'MAY-PROMO', 'FREE-MOVIE'];
+  for (const code of issueCodes) {
+    const coupon = await prisma.coupon.findUnique({ where: { code } });
+    if (!coupon) continue;
+    await prisma.userCoupon.create({
+      data: {
+        customerId: testUser.id,
+        couponId: coupon.id,
+        expiresAt: new Date(Date.now() + coupon.validDays * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+  console.log(`  테스트 사용자에게 UserCoupon ${issueCodes.length}개 발급`);
+}
+
+async function seedPricingPolicies() {
+  const screenTypes = await prisma.screenType.findMany();
+  const policies: {
+    cinemaId: null;
+    screenTypeId: number;
+    format: string;
+    dayType: string;
+    audienceType: string;
+    basePrice: number;
+  }[] = [];
+
+  for (const screenType of screenTypes) {
+    const matrix = PRICING_MATRIX[screenType.name];
+    if (!matrix) continue;
+
+    for (const format of ['2D', '3D']) {
+      for (const dayType of ['WEEKDAY', 'WEEKEND']) {
+        for (const audienceType of ['ADULT', 'TEEN', 'SENIOR', 'DISABLED', 'CHILD']) {
+          const price = matrix[format][dayType][audienceType];
+          policies.push({
+            cinemaId: null,
+            screenTypeId: screenType.id,
+            format,
+            dayType,
+            audienceType,
+            basePrice: price,
+          });
+        }
+      }
+    }
+  }
+
+  await prisma.pricingPolicy.createMany({ data: policies });
+  console.log(`  PricingPolicy ${policies.length}개 생성`);
+}
+
 function dateAt(dayOffset: number, hour: number, minute = 0): Date {
   const d = new Date();
   d.setDate(d.getDate() + dayOffset);
@@ -406,17 +578,21 @@ async function main() {
   await prisma.movieMedia.deleteMany();
   await prisma.moviePerson.deleteMany();
   await prisma.movieGenre.deleteMany();
+  await prisma.couponUsage.deleteMany();
+  await prisma.userCoupon.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.reservation.deleteMany();
   await prisma.screening.deleteMany();
   await prisma.seat.deleteMany();
   await prisma.screen.deleteMany();
   await prisma.movie.deleteMany();
+  await prisma.pricingPolicy.deleteMany();
   await prisma.cinema.deleteMany();
   await prisma.seatType.deleteMany();
   await prisma.screenType.deleteMany();
   await prisma.person.deleteMany();
   await prisma.genre.deleteMany();
+  await prisma.coupon.deleteMany();
   // customer는 삭제하지 않음 — ID 유지로 기존 JWT 토큰 호환
 
   // ── 1. 상영관 유형 / 좌석 유형 ────────────────────────────────────
@@ -434,6 +610,9 @@ async function main() {
     prisma.seatType.create({ data: { name: '리클라이너석', additionalPrice: 8000 } }),
   ]);
   console.log('  상영관 유형 4개, 좌석 유형 4개 생성');
+
+  // ── 1-b. 요금 정책 (공통, cinemaId=null) ─────────────────────────
+  await seedPricingPolicies();
 
   // ── 2. 영화관 4개 ─────────────────────────────────────────────────
   const cinemas = await Promise.all([
@@ -565,6 +744,9 @@ async function main() {
   });
   console.log('  테스트 계정: test@test.com / password123');
 
+  // ── 6-b. 쿠폰 마스터 + 테스트 사용자 발급 ────────────────────────
+  await seedCoupons();
+
   // ── 7. 영화 메타데이터 (장르/감독/배우/트레일러) ──────────────────
   const genreNames = ['액션', '드라마', '코미디', 'SF', '공포', '로맨스', '애니메이션', '다큐멘터리', '스릴러', '판타지', '미스터리', '가족', '음악', '전쟁'];
   await prisma.genre.createMany({ data: genreNames.map((name) => ({ name })), skipDuplicates: true });
@@ -616,7 +798,7 @@ async function main() {
   console.log(`  MovieMedia ${countMovieMedia}건`);
 
   // ── 집계 ─────────────────────────────────────────────────────────
-  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia] = await Promise.all([
+  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon] = await Promise.all([
     prisma.screenType.count(),
     prisma.seatType.count(),
     prisma.cinema.count(),
@@ -630,22 +812,28 @@ async function main() {
     prisma.movieGenre.count(),
     prisma.moviePerson.count(),
     prisma.movieMedia.count(),
+    prisma.pricingPolicy.count(),
+    prisma.coupon.count(),
+    prisma.userCoupon.count(),
   ]);
 
   console.log('\n=== 삽입 완료 ===');
-  console.log(`  ScreenType : ${cScreenType}개`);
-  console.log(`  SeatType   : ${cSeatType}개`);
-  console.log(`  Cinema     : ${cCinema}개`);
-  console.log(`  Screen     : ${cScreen}개`);
-  console.log(`  Seat       : ${cSeat}석`);
-  console.log(`  Movie      : ${cMovie}편`);
-  console.log(`  Screening  : ${cScreening}개`);
-  console.log(`  Customer   : ${cCustomer}명`);
-  console.log(`  Genre      : ${cGenre}개`);
-  console.log(`  Person     : ${cPerson}명`);
-  console.log(`  MovieGenre : ${cMovieGenre}건`);
-  console.log(`  MoviePerson: ${cMoviePerson}건`);
-  console.log(`  MovieMedia : ${cMovieMedia}건`);
+  console.log(`  ScreenType    : ${cScreenType}개`);
+  console.log(`  SeatType      : ${cSeatType}개`);
+  console.log(`  Cinema        : ${cCinema}개`);
+  console.log(`  Screen        : ${cScreen}개`);
+  console.log(`  Seat          : ${cSeat}석`);
+  console.log(`  Movie         : ${cMovie}편`);
+  console.log(`  Screening     : ${cScreening}개`);
+  console.log(`  Customer      : ${cCustomer}명`);
+  console.log(`  Genre         : ${cGenre}개`);
+  console.log(`  Person        : ${cPerson}명`);
+  console.log(`  MovieGenre    : ${cMovieGenre}건`);
+  console.log(`  MoviePerson   : ${cMoviePerson}건`);
+  console.log(`  MovieMedia    : ${cMovieMedia}건`);
+  console.log(`  PricingPolicy : ${cPricingPolicy}개`);
+  console.log(`  Coupon        : ${cCoupon}개`);
+  console.log(`  UserCoupon    : ${cUserCoupon}개`);
 }
 
 main()

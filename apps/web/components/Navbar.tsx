@@ -60,8 +60,8 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-4 text-sm">
           {loggedIn ? (
             <>
-              <Link href="/my/reservations" className={navLinkClass('/my/reservations')}>
-                내 예매
+              <Link href="/my/reservations" className={navLinkClass('/my')}>
+                마이페이지
               </Link>
               <button
                 onClick={logout}
@@ -109,8 +109,8 @@ export default function Navbar() {
           <div className="border-t border-zinc-800 pt-3 flex flex-col gap-3">
             {loggedIn ? (
               <>
-                <Link href="/my/reservations" className={navLinkClass('/my/reservations')}>
-                  내 예매
+                <Link href="/my/reservations" className={navLinkClass('/my')}>
+                  마이페이지
                 </Link>
                 <button onClick={logout} className="text-left text-zinc-400 hover:text-white transition-colors">
                   로그아웃

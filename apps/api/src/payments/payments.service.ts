@@ -18,6 +18,7 @@ export class PaymentsService {
 
     const reservation = await this.prisma.reservation.findUnique({
       where: { orderId },
+      include: { couponUsage: true },
     });
     if (!reservation) throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
     if (reservation.customerId !== customerId) {
@@ -34,7 +35,7 @@ export class PaymentsService {
     const secretKey = process.env.TOSS_SECRET_KEY ?? '';
     const encoded = Buffer.from(`${secretKey}:`).toString('base64');
 
-    // Toss 에도 서버 저장값(reservation.totalAmount)을 사용 — 클라이언트 amount 미사용
+    // Toss에도 서버 저장값(reservation.totalAmount)을 사용 — 클라이언트 amount 미사용
     const tossRes = await fetch(TOSS_CONFIRM_URL, {
       method: 'POST',
       headers: {
@@ -53,9 +54,19 @@ export class PaymentsService {
       throw new BadRequestException(err.message ?? '토스 결제 승인 실패');
     }
 
-    const updated = await this.prisma.reservation.update({
-      where: { id: reservation.id },
-      data: { status: 'PAID', paymentKey, paidAt: new Date() },
+    // 결제 성공: reservation PAID + coupon USED 원자적 처리
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const r = await tx.reservation.update({
+        where: { id: reservation.id },
+        data: { status: 'PAID', paymentKey, paidAt: new Date() },
+      });
+      if (reservation.couponUsage) {
+        await tx.userCoupon.update({
+          where: { id: reservation.couponUsage.userCouponId },
+          data: { status: 'USED', usedAt: new Date() },
+        });
+      }
+      return r;
     });
 
     return { reservationId: updated.id, status: 'PAID' };

@@ -1,4 +1,14 @@
-import type { Movie, MovieDetail, ScreeningDetail, Reservation, CinemaListItem, CinemaDetail } from './types';
+import type {
+  Movie,
+  MovieDetail,
+  ScreeningDetail,
+  Reservation,
+  CinemaListItem,
+  CinemaDetail,
+  AudienceCounts,
+  PriceBreakdown,
+  UserCoupon,
+} from './types';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -43,10 +53,30 @@ export const signup = (data: {
 }) => req<{ token: string }>('/auth/signup', { method: 'POST', body: JSON.stringify(data) });
 
 export const createReservation = (
-  data: { screeningId: number; seatIds: number[] },
+  data: {
+    screeningId: number;
+    seatIds: number[];
+    audienceCounts: AudienceCounts;
+    userCouponId?: number;
+  },
   token: string,
 ): Promise<Reservation> =>
   req<Reservation>('/reservations', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+
+export const calculatePrice = (
+  data: {
+    screeningId: number;
+    seatIds: number[];
+    audienceCounts: AudienceCounts;
+    userCouponId?: number;
+  },
+  token: string,
+): Promise<PriceBreakdown> =>
+  req<PriceBreakdown>('/pricing/calculate', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -87,3 +117,27 @@ export function fetchCinema(id: number): Promise<CinemaDetail> {
   return fetch(`${API}/cinemas/${id}`, { next: { revalidate: 30 } } as RequestInit)
     .then((r) => r.json());
 }
+
+// ── 쿠폰 ──────────────────────────────────────────────────────────
+export const getMyCoupons = (
+  status: 'AVAILABLE' | 'USED' | 'EXPIRED',
+  token: string,
+): Promise<UserCoupon[]> =>
+  req<UserCoupon[]>(`/coupons/me?status=${status}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const redeemCoupon = (code: string, token: string): Promise<UserCoupon> =>
+  req<UserCoupon>('/coupons/redeem', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ code }),
+  });
+
+export const getApplicableCoupons = (
+  amount: number,
+  token: string,
+): Promise<UserCoupon[]> =>
+  req<UserCoupon[]>(`/coupons/applicable?amount=${amount}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
