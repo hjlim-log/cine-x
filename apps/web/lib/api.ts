@@ -8,6 +8,7 @@ import type {
   AudienceCounts,
   PriceBreakdown,
   UserCoupon,
+  PartnerDiscount,
 } from './types';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -27,12 +28,12 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 // ── 서버 컴포넌트용 (직접 fetch + revalidate) ─────────────────────
 export function fetchMovies(): Promise<Movie[]> {
   return fetch(`${API}/movies`, { next: { revalidate: 60 } } as RequestInit)
-    .then((r) => r.json());
+    .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 }
 
 export function fetchMovie(id: number): Promise<MovieDetail> {
   return fetch(`${API}/movies/${id}`, { next: { revalidate: 60 } } as RequestInit)
-    .then((r) => r.json());
+    .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
 }
 
 // ── 클라이언트 컴포넌트용 ─────────────────────────────────────────
@@ -140,4 +141,23 @@ export const getApplicableCoupons = (
 ): Promise<UserCoupon[]> =>
   req<UserCoupon[]>(`/coupons/applicable?amount=${amount}`, {
     headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const getApplicablePartnerDiscounts = (
+  amount: number,
+  token: string,
+): Promise<PartnerDiscount[]> =>
+  req<PartnerDiscount[]>(`/partner-discounts/applicable?amount=${amount}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const applyReservationPartnerDiscount = (
+  reservationId: number,
+  partnerDiscountId: number | undefined,
+  token: string,
+): Promise<PriceBreakdown> =>
+  req<PriceBreakdown>(`/reservations/${reservationId}/partner-discount`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(partnerDiscountId ? { partnerDiscountId } : {}),
   });

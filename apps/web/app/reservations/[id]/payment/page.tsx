@@ -4,9 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk';
-import { getReservation, calculatePrice } from '@/lib/api';
+import {
+  getReservation,
+  calculatePrice,
+  getApplicablePartnerDiscounts,
+  applyReservationPartnerDiscount,
+} from '@/lib/api';
 import Spinner from '@/components/Spinner';
-import type { Reservation, AudienceCounts, PriceBreakdown } from '@/lib/types';
+import type { Reservation, AudienceCounts, PriceBreakdown, PartnerDiscount } from '@/lib/types';
 
 const AUDIENCE_LABELS: Record<string, string> = {
   ADULT: '성인', TEEN: '청소년', SENIOR: '경로', DISABLED: '장애인', CHILD: '어린이',
@@ -42,8 +47,13 @@ export default function PaymentPage() {
   const [paying, setPaying] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [breakdown, setBreakdown] = useState<PriceBreakdown | null>(null);
+  const [partnerDiscounts, setPartnerDiscounts] = useState<PartnerDiscount[]>([]);
+  const [selectedPartnerDiscountId, setSelectedPartnerDiscountId] = useState<number | null>(null);
+  const [applyingDiscount, setApplyingDiscount] = useState(false);
+  const [discountError, setDiscountError] = useState('');
 
   const initialized = useRef(false);
+  const partnerDiscountsFetched = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const widgetsRef = useRef<any>(null);
 
@@ -82,10 +92,8 @@ export default function PaymentPage() {
   // 카운트다운 인터벌
   useEffect(() => {
     if (pageState !== 'ready' || !reservation) return;
-
     const expireAt = new Date(reservation.createdAt).getTime() + PENDING_TTL_MS;
     setRemainingMs(Math.max(0, expireAt - Date.now()));
-
     const id = setInterval(() => {
       const rem = expireAt - Date.now();
       if (rem <= 0) {
@@ -96,11 +104,10 @@ export default function PaymentPage() {
         setRemainingMs(rem);
       }
     }, 1000);
-
     return () => clearInterval(id);
   }, [pageState, reservation]);
 
-  // 가격 breakdown 조회 (쿠폰 포함)
+  // 초기 가격 breakdown 계산 (쿠폰 포함, 제휴할인 제외)
   useEffect(() => {
     if (!reservation?.audienceCounts || !reservation.tickets.length) return;
     const token = localStorage.getItem('token');
@@ -120,18 +127,27 @@ export default function PaymentPage() {
       .catch(() => {});
   }, [reservation]);
 
+  // breakdown 최초 로드 후 제휴할인 목록 조회 (1회만)
+  useEffect(() => {
+    if (!breakdown || partnerDiscountsFetched.current) return;
+    partnerDiscountsFetched.current = true;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    getApplicablePartnerDiscounts(breakdown.afterCouponAmount, token)
+      .then(setPartnerDiscounts)
+      .catch(() => {});
+  }, [breakdown]);
+
   // 토스 위젯 초기화
   useEffect(() => {
     if (pageState !== 'ready' || !reservation || initialized.current) return;
     initialized.current = true;
-
     const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!;
     (async () => {
       try {
         const tossPayments = await loadTossPayments(clientKey);
         const widgets = tossPayments.widgets({ customerKey: ANONYMOUS });
         widgetsRef.current = widgets;
-
         await widgets.setAmount({ currency: 'KRW', value: reservation.totalAmount });
         await widgets.renderPaymentMethods({ selector: '#payment-method', variantKey: 'DEFAULT' });
         await widgets.renderAgreement({ selector: '#agreement', variantKey: 'AGREEMENT' });
@@ -142,6 +158,30 @@ export default function PaymentPage() {
       }
     })();
   }, [pageState, reservation]);
+
+  async function handlePartnerDiscountSelect(discountId: number | null) {
+    if (!reservation || applyingDiscount) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setApplyingDiscount(true);
+    setDiscountError('');
+    try {
+      const newBreakdown = await applyReservationPartnerDiscount(
+        Number(reservationId),
+        discountId ?? undefined,
+        token,
+      );
+      setBreakdown(newBreakdown);
+      setSelectedPartnerDiscountId(discountId);
+      if (widgetsRef.current) {
+        await widgetsRef.current.setAmount({ currency: 'KRW', value: newBreakdown.totalAmount });
+      }
+    } catch (e) {
+      setDiscountError(e instanceof Error ? e.message : '제휴할인 적용에 실패했습니다.');
+    } finally {
+      setApplyingDiscount(false);
+    }
+  }
 
   async function handlePay() {
     if (!widgetsRef.current || !reservation) return;
@@ -168,14 +208,11 @@ export default function PaymentPage() {
   if (pageState === 'expired') {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center space-y-5">
-        <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto text-3xl">
-          ⏰
-        </div>
+        <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto text-3xl">⏰</div>
         <div>
           <h1 className="text-xl font-bold">결제 시간이 만료되었습니다</h1>
           <p className="text-zinc-400 text-sm mt-2">
-            좌석 선택 후 10분 이내에 결제해야 합니다.<br />
-            좌석을 다시 선택해주세요.
+            좌석 선택 후 10분 이내에 결제해야 합니다.<br />좌석을 다시 선택해주세요.
           </p>
         </div>
         {reservation && (
@@ -220,10 +257,11 @@ export default function PaymentPage() {
 
   const seats = reservation.tickets.map((t) => `${t.seat.row}${t.seat.number}`).join(', ');
   const isUrgent = remainingMs <= 60_000;
+  const finalAmount = breakdown?.totalAmount ?? reservation.totalAmount;
 
   return (
     <div className="max-w-xl mx-auto px-4 py-8">
-      {/* 헤더 카드: 영화 정보 + 카운트다운 */}
+      {/* 헤더 카드 */}
       <div className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl p-5 mb-5 flex items-center justify-between gap-4 transition-colors">
         <div className="min-w-0">
           <p className="font-bold text-base truncate">{reservation.screening.movie.title}</p>
@@ -232,16 +270,10 @@ export default function PaymentPage() {
           </p>
           <p className="text-zinc-500 text-sm">
             {new Date(reservation.screening.startTime).toLocaleString('ko-KR', {
-              month: 'long',
-              day: 'numeric',
-              weekday: 'short',
-              hour: '2-digit',
-              minute: '2-digit',
+              month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit',
             })}
           </p>
         </div>
-
-        {/* 카운트다운 */}
         <div className={`shrink-0 text-right transition-colors ${isUrgent ? 'text-red-400' : 'text-zinc-300'}`}>
           <div className={`text-3xl font-mono font-bold tabular-nums leading-none ${isUrgent ? 'animate-pulse' : ''}`}>
             {formatCountdown(remainingMs)}
@@ -252,42 +284,139 @@ export default function PaymentPage() {
         </div>
       </div>
 
-      {/* 결제 상세 */}
+      {/* 영수증 형태 가격 상세 */}
       <div className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl p-5 mb-5 transition-colors">
         <h2 className="font-semibold text-sm text-zinc-400 mb-3">결제 정보</h2>
-        <div className="space-y-2 text-sm">
-          <InfoRow label="좌석" value={seats} />
+        <div className="text-sm space-y-0.5">
+          <ReceiptRow label="좌석" value={seats} />
           {reservation.audienceCounts && (
-            <InfoRow label="관람인원" value={formatAudience(reservation.audienceCounts)} />
+            <ReceiptRow label="관람인원" value={formatAudience(reservation.audienceCounts)} />
           )}
-          {breakdown && (
-            <div className="space-y-1 pt-1 pb-1">
+
+          {breakdown ? (
+            <div className="pt-2 space-y-0.5">
+              {/* 인원별 기본료 */}
               {breakdown.details.map((d) => (
-                <div key={d.audienceType} className="flex justify-between text-zinc-500 text-xs">
+                <div key={d.audienceType} className="flex justify-between text-zinc-500 text-xs py-0.5">
                   <span>{AUDIENCE_LABELS[d.audienceType] ?? d.audienceType} {d.count}명 × {d.unitPrice.toLocaleString()}원</span>
                   <span>{d.subtotal.toLocaleString()}원</span>
                 </div>
               ))}
               {breakdown.seatBonus > 0 && (
-                <div className="flex justify-between text-zinc-500 text-xs">
+                <div className="flex justify-between text-zinc-500 text-xs py-0.5">
                   <span>좌석 추가요금</span>
                   <span>+{breakdown.seatBonus.toLocaleString()}원</span>
                 </div>
               )}
+
+              <Divider />
+              <ReceiptRow label="소계" value={`${breakdown.subtotal.toLocaleString()}원`} bold />
+
+              {/* 쿠폰 할인 */}
               {breakdown.couponDiscount > 0 && (
-                <div className="flex justify-between text-emerald-400 text-xs font-medium">
-                  <span>쿠폰 할인 ({breakdown.appliedCoupon?.couponName})</span>
-                  <span>-{breakdown.couponDiscount.toLocaleString()}원</span>
-                </div>
+                <ReceiptRow
+                  label={`쿠폰 (${breakdown.appliedCoupon?.couponName ?? '쿠폰'})`}
+                  value={`-${breakdown.couponDiscount.toLocaleString()}원`}
+                  color="emerald"
+                />
               )}
+
+              {/* 쿠폰 + 제휴할인 둘 다 있을 때 중간 소계 표시 */}
+              {breakdown.couponDiscount > 0 && breakdown.partnerDiscount > 0 && (
+                <>
+                  <Divider />
+                  <ReceiptRow label="쿠폰 적용 후" value={`${breakdown.afterCouponAmount.toLocaleString()}원`} />
+                </>
+              )}
+
+              {/* 제휴할인 */}
+              {breakdown.partnerDiscount > 0 && (
+                <ReceiptRow
+                  label={`${breakdown.appliedPartnerDiscount?.partnerName ?? '제휴'} 할인`}
+                  value={`-${breakdown.partnerDiscount.toLocaleString()}원`}
+                  color="blue"
+                />
+              )}
+
+              <Divider />
+              <ReceiptRow label="최종 결제 금액" value={`${breakdown.totalAmount.toLocaleString()}원`} bold color="red" />
+            </div>
+          ) : (
+            <div className="pt-2">
+              <Divider />
+              <ReceiptRow label="결제 금액" value={`${reservation.totalAmount.toLocaleString()}원`} bold color="red" />
             </div>
           )}
-          <div className="border-t border-zinc-800 pt-2 flex justify-between font-bold text-base">
-            <span>결제 금액</span>
-            <span className="text-red-400">{reservation.totalAmount.toLocaleString()}원</span>
-          </div>
         </div>
       </div>
+
+      {/* 제휴할인 선택 */}
+      {partnerDiscounts.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl p-5 mb-5 transition-colors">
+          <h2 className="font-semibold text-sm text-zinc-400 mb-1">💳 제휴 할인</h2>
+          <p className="text-xs text-zinc-600 mb-4">결제할 카드를 선택하시면 추가 할인이 적용됩니다.</p>
+
+          <div className="grid grid-cols-3 gap-2">
+            {/* 사용 안함 */}
+            <button
+              onClick={() => selectedPartnerDiscountId !== null && handlePartnerDiscountSelect(null)}
+              disabled={applyingDiscount || selectedPartnerDiscountId === null}
+              className={`relative p-3 rounded-lg border text-left transition-all ${
+                selectedPartnerDiscountId === null
+                  ? 'border-zinc-400 bg-zinc-800 cursor-default'
+                  : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 cursor-pointer'
+              }`}
+            >
+              <div className="text-xs font-medium text-zinc-300">사용 안함</div>
+              {selectedPartnerDiscountId === null && <SelectedMark />}
+            </button>
+
+            {partnerDiscounts.map((pd) => (
+              <button
+                key={pd.id}
+                onClick={() => selectedPartnerDiscountId !== pd.id && handlePartnerDiscountSelect(pd.id)}
+                disabled={applyingDiscount || selectedPartnerDiscountId === pd.id}
+                style={{ backgroundColor: pd.bgColor ?? '#374151' }}
+                className={`relative p-3 rounded-lg text-left transition-all ${
+                  selectedPartnerDiscountId === pd.id
+                    ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900 cursor-default'
+                    : 'opacity-80 hover:opacity-100 cursor-pointer'
+                }`}
+              >
+                <div className="text-xs font-bold text-white truncate">{pd.partnerName}</div>
+                <div className="text-[11px] text-white/80 mt-0.5">
+                  {pd.discountMethod === 'AMOUNT'
+                    ? `-${pd.discountValue.toLocaleString()}원`
+                    : `-${pd.discountValue}%`}
+                </div>
+                {selectedPartnerDiscountId === pd.id && <SelectedMark />}
+              </button>
+            ))}
+          </div>
+
+          {/* 적용된 할인 정보 */}
+          {selectedPartnerDiscountId !== null && breakdown?.appliedPartnerDiscount && (
+            <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between">
+              <span className="text-sm text-zinc-300 truncate mr-2">
+                {breakdown.appliedPartnerDiscount.name}
+              </span>
+              <span className="text-sm font-semibold text-blue-400 shrink-0">
+                -{breakdown.appliedPartnerDiscount.discountAmount.toLocaleString()}원
+              </span>
+            </div>
+          )}
+
+          {applyingDiscount && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+              <div className="w-3 h-3 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+              할인 적용 중...
+            </div>
+          )}
+          {discountError && (
+            <p className="mt-2 text-xs text-red-400">{discountError}</p>
+          )}
+        </div>
+      )}
 
       {/* 토스 위젯 */}
       {!widgetReady && (
@@ -300,7 +429,7 @@ export default function PaymentPage() {
 
       <button
         onClick={handlePay}
-        disabled={!widgetReady || paying}
+        disabled={!widgetReady || paying || applyingDiscount}
         className="w-full mt-6 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-semibold py-3.5 rounded-lg transition-colors"
       >
         {paying ? (
@@ -309,18 +438,44 @@ export default function PaymentPage() {
             처리 중...
           </span>
         ) : (
-          `${reservation.totalAmount.toLocaleString()}원 결제하기`
+          `${finalAmount.toLocaleString()}원 결제하기`
         )}
       </button>
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function SelectedMark() {
   return (
-    <div className="flex justify-between gap-4">
-      <span className="text-zinc-400 shrink-0">{label}</span>
-      <span className="text-right">{value}</span>
+    <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-white rounded-full flex items-center justify-center">
+      <span className="text-[9px] font-bold text-zinc-900">✓</span>
     </div>
   );
+}
+
+function ReceiptRow({
+  label,
+  value,
+  bold = false,
+  color,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  color?: 'emerald' | 'blue' | 'red';
+}) {
+  const colorClass =
+    color === 'emerald' ? 'text-emerald-400' :
+    color === 'blue' ? 'text-blue-400' :
+    color === 'red' ? 'text-red-400' : '';
+  return (
+    <div className={`flex justify-between gap-4 py-0.5 ${bold ? 'font-semibold' : ''} ${colorClass || ''}`}>
+      <span className={!color && !bold ? 'text-zinc-400' : ''}>{label}</span>
+      <span className="shrink-0">{value}</span>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div className="border-t border-zinc-800 my-2" />;
 }

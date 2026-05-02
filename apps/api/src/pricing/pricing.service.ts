@@ -191,15 +191,69 @@ export class PricingService {
       };
     }
 
+    const afterCouponAmount = subtotal - couponDiscount;
+
+    // 10. 제휴할인 적용
+    let partnerDiscount = 0;
+    let appliedPartnerDiscount: PriceBreakdown['appliedPartnerDiscount'];
+
+    if (input.partnerDiscountId) {
+      const pd = await this.prisma.partnerDiscount.findUnique({
+        where: { id: input.partnerDiscountId },
+      });
+
+      if (!pd || !pd.isActive) {
+        throw new BadRequestException('사용할 수 없는 제휴할인입니다.');
+      }
+
+      if (pd.validFrom > now || (pd.validTo && pd.validTo < now)) {
+        throw new BadRequestException('유효 기간이 아닌 제휴할인입니다.');
+      }
+
+      if (input.userCouponId && !pd.combinableWithCoupon) {
+        throw new BadRequestException('쿠폰과 함께 사용할 수 없는 제휴할인입니다.');
+      }
+
+      if (afterCouponAmount < pd.minPurchase) {
+        throw new BadRequestException(
+          `최소 ${pd.minPurchase.toLocaleString()}원 이상 결제 시 사용 가능합니다. (쿠폰 적용 후 ${afterCouponAmount.toLocaleString()}원)`,
+        );
+      }
+
+      if (pd.discountMethod === 'AMOUNT') {
+        partnerDiscount = pd.discountValue;
+      } else if (pd.discountMethod === 'PERCENT') {
+        let calculated = Math.floor((afterCouponAmount * pd.discountValue) / 100);
+        if (pd.maxDiscount && calculated > pd.maxDiscount) {
+          calculated = pd.maxDiscount;
+        }
+        partnerDiscount = calculated;
+      }
+
+      partnerDiscount = Math.min(partnerDiscount, afterCouponAmount);
+
+      appliedPartnerDiscount = {
+        partnerDiscountId: pd.id,
+        name: pd.name,
+        partnerName: pd.partnerName,
+        partnerType: pd.partnerType,
+        discountMethod: pd.discountMethod,
+        discountAmount: partnerDiscount,
+      };
+    }
+
     return {
       baseTotal,
       seatBonus,
       subtotal,
       couponDiscount,
-      totalAmount: subtotal - couponDiscount,
+      afterCouponAmount,
+      partnerDiscount,
+      totalAmount: afterCouponAmount - partnerDiscount,
       details,
       seatDetails,
       appliedCoupon,
+      appliedPartnerDiscount,
     };
   }
 

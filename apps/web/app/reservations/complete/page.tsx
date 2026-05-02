@@ -96,6 +96,14 @@ function CompleteContent() {
               value={`-${reservation.couponUsage.discountAmount.toLocaleString()}원 (${reservation.couponUsage.userCoupon?.coupon.name ?? '쿠폰'})`}
             />
           )}
+          {reservation.partnerDiscountUsage && reservation.partnerDiscountUsage.discountAmount > 0 && (
+            <Row
+              label="제휴 할인"
+              value={`-${reservation.partnerDiscountUsage.discountAmount.toLocaleString()}원 (${
+                reservation.partnerDiscountUsage.partnerDiscount?.partnerName ?? '제휴'
+              })`}
+            />
+          )}
           {reservation.paidAt && (
             <Row
               label="결제 시각"

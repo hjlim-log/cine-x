@@ -8,10 +8,15 @@ import {
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
+import { IsInt, IsOptional, Min } from 'class-validator';
 import { ReservationsService } from './reservations.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
+
+class ApplyPartnerDiscountDto {
+  @IsOptional() @IsInt() @Min(1) partnerDiscountId?: number;
+}
 
 @Controller('reservations')
 @UseGuards(JwtAuthGuard)
@@ -45,5 +50,14 @@ export class ReservationsController {
     @GetUser() user: { id: number },
   ) {
     return this.reservationsService.cancel(id, user.id);
+  }
+
+  @Patch(':id/partner-discount')
+  applyPartnerDiscount(
+    @Param('id', ParseIntPipe) id: number,
+    @GetUser() user: { id: number },
+    @Body() dto: ApplyPartnerDiscountDto,
+  ) {
+    return this.reservationsService.applyPartnerDiscount(id, user.id, dto.partnerDiscountId);
   }
 }

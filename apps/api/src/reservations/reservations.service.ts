@@ -42,13 +42,14 @@ export class ReservationsService {
         throw new ConflictException('이미 예매된 좌석이 포함되어 있습니다.');
       }
 
-      // 가격 계산 + 쿠폰 검증 (클라이언트 금액 일절 신뢰 안 함)
+      // 가격 계산 + 쿠폰/제휴할인 검증 (클라이언트 금액 일절 신뢰 안 함)
       const breakdown = await this.pricingService.calculate({
         screeningId,
         seatIds,
         audienceCounts: dto.audienceCounts,
         userCouponId: dto.userCouponId,
         customerId,
+        partnerDiscountId: dto.partnerDiscountId,
       });
 
       const reservation = await tx.reservation.create({
@@ -94,6 +95,16 @@ export class ReservationsService {
         });
       }
 
+      if (dto.partnerDiscountId && breakdown.partnerDiscount > 0) {
+        await tx.partnerDiscountUsage.create({
+          data: {
+            partnerDiscountId: dto.partnerDiscountId,
+            reservationId: reservation.id,
+            discountAmount: breakdown.partnerDiscount,
+          },
+        });
+      }
+
       return reservation;
     });
   }
@@ -121,6 +132,12 @@ export class ReservationsService {
                 coupon: { select: { name: true, type: true } },
               },
             },
+          },
+        },
+        partnerDiscountUsage: {
+          select: {
+            discountAmount: true,
+            partnerDiscount: { select: { name: true, partnerName: true } },
           },
         },
       },
@@ -157,6 +174,12 @@ export class ReservationsService {
             },
           },
         },
+        partnerDiscountUsage: {
+          select: {
+            discountAmount: true,
+            partnerDiscount: { select: { name: true, partnerName: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -190,6 +213,39 @@ export class ReservationsService {
       where: { status: 'PENDING', createdAt: { lt: tenMinutesAgo } },
       data: { status: 'EXPIRED' },
     });
+  }
+
+  async applyPartnerDiscount(id: number, customerId: number, partnerDiscountId?: number) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      include: { couponUsage: true, tickets: true },
+    });
+    if (!reservation) throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
+    if (reservation.customerId !== customerId) throw new ForbiddenException('권한이 없습니다.');
+    if (reservation.status !== 'PENDING') {
+      throw new BadRequestException('결제 대기 상태의 예매만 변경 가능합니다.');
+    }
+
+    const breakdown = await this.pricingService.calculate({
+      screeningId: reservation.screeningId,
+      seatIds: reservation.tickets.map((t) => t.seatId),
+      audienceCounts: (reservation.audienceCounts as Record<string, number>) ?? {},
+      userCouponId: reservation.couponUsage?.userCouponId ?? undefined,
+      customerId,
+      partnerDiscountId,
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.reservation.update({ where: { id }, data: { totalAmount: breakdown.totalAmount } });
+      await tx.partnerDiscountUsage.deleteMany({ where: { reservationId: id } });
+      if (partnerDiscountId && breakdown.partnerDiscount > 0) {
+        await tx.partnerDiscountUsage.create({
+          data: { partnerDiscountId, reservationId: id, discountAmount: breakdown.partnerDiscount },
+        });
+      }
+    });
+
+    return breakdown;
   }
 
   async cancel(id: number, customerId: number) {

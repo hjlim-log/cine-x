@@ -115,6 +115,79 @@ const COUPONS = [
   },
 ];
 
+const PARTNER_DISCOUNTS = [
+  {
+    name: '신한카드 영화 2,000원 할인',
+    partnerType: 'CARD',
+    partnerName: '신한카드',
+    description: '1만원 이상 결제 시 자동 적용',
+    discountMethod: 'AMOUNT',
+    discountValue: 2000,
+    minPurchase: 10000,
+    combinableWithCoupon: true,
+    bgColor: '#0046ff',
+    imageUrl: 'https://placehold.co/200x130/0046ff/white?text=Shinhan',
+  },
+  {
+    name: '현대카드 영화 3,000원 할인',
+    partnerType: 'CARD',
+    partnerName: '현대카드',
+    description: '1.5만원 이상 결제 시 적용',
+    discountMethod: 'AMOUNT',
+    discountValue: 3000,
+    minPurchase: 15000,
+    combinableWithCoupon: true,
+    bgColor: '#000000',
+    imageUrl: 'https://placehold.co/200x130/000000/white?text=Hyundai',
+  },
+  {
+    name: 'KB국민카드 5% 청구할인',
+    partnerType: 'CARD',
+    partnerName: 'KB국민카드',
+    description: '주말 영화 관람 시 5% 할인 (최대 5,000원)',
+    discountMethod: 'PERCENT',
+    discountValue: 5,
+    maxDiscount: 5000,
+    minPurchase: 20000,
+    combinableWithCoupon: true,
+    bgColor: '#ffb600',
+    imageUrl: 'https://placehold.co/200x130/ffb600/black?text=KB',
+  },
+  {
+    name: '삼성카드 10% 즉시할인',
+    partnerType: 'CARD',
+    partnerName: '삼성카드',
+    description: '평일 한정 10% 할인 (최대 8,000원)',
+    discountMethod: 'PERCENT',
+    discountValue: 10,
+    maxDiscount: 8000,
+    minPurchase: 25000,
+    combinableWithCoupon: true,
+    bgColor: '#1428a0',
+    imageUrl: 'https://placehold.co/200x130/1428a0/white?text=Samsung',
+  },
+  {
+    name: '롯데카드 영화 1,500원 할인',
+    partnerType: 'CARD',
+    partnerName: '롯데카드',
+    description: '한도 무제한, 매일 사용 가능',
+    discountMethod: 'AMOUNT',
+    discountValue: 1500,
+    minPurchase: 8000,
+    combinableWithCoupon: true,
+    bgColor: '#ed1c24',
+    imageUrl: 'https://placehold.co/200x130/ed1c24/white?text=Lotte',
+  },
+];
+
+async function seedPartnerDiscounts() {
+  for (const pd of PARTNER_DISCOUNTS) {
+    const exists = await prisma.partnerDiscount.findFirst({ where: { name: pd.name } });
+    if (!exists) await prisma.partnerDiscount.create({ data: pd });
+  }
+  console.log(`  PartnerDiscount ${PARTNER_DISCOUNTS.length}개`);
+}
+
 async function seedCoupons() {
   for (const c of COUPONS) {
     await prisma.coupon.upsert({ where: { code: c.code }, create: c, update: c });
@@ -578,6 +651,7 @@ async function main() {
   await prisma.movieMedia.deleteMany();
   await prisma.moviePerson.deleteMany();
   await prisma.movieGenre.deleteMany();
+  await prisma.partnerDiscountUsage.deleteMany();
   await prisma.couponUsage.deleteMany();
   await prisma.userCoupon.deleteMany();
   await prisma.ticket.deleteMany();
@@ -593,6 +667,7 @@ async function main() {
   await prisma.person.deleteMany();
   await prisma.genre.deleteMany();
   await prisma.coupon.deleteMany();
+  await prisma.partnerDiscount.deleteMany();
   // customer는 삭제하지 않음 — ID 유지로 기존 JWT 토큰 호환
 
   // ── 1. 상영관 유형 / 좌석 유형 ────────────────────────────────────
@@ -747,6 +822,9 @@ async function main() {
   // ── 6-b. 쿠폰 마스터 + 테스트 사용자 발급 ────────────────────────
   await seedCoupons();
 
+  // ── 6-c. 제휴할인 마스터 데이터 ──────────────────────────────────
+  await seedPartnerDiscounts();
+
   // ── 7. 영화 메타데이터 (장르/감독/배우/트레일러) ──────────────────
   const genreNames = ['액션', '드라마', '코미디', 'SF', '공포', '로맨스', '애니메이션', '다큐멘터리', '스릴러', '판타지', '미스터리', '가족', '음악', '전쟁'];
   await prisma.genre.createMany({ data: genreNames.map((name) => ({ name })), skipDuplicates: true });
@@ -798,7 +876,7 @@ async function main() {
   console.log(`  MovieMedia ${countMovieMedia}건`);
 
   // ── 집계 ─────────────────────────────────────────────────────────
-  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon] = await Promise.all([
+  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon, cPartnerDiscount] = await Promise.all([
     prisma.screenType.count(),
     prisma.seatType.count(),
     prisma.cinema.count(),
@@ -815,6 +893,7 @@ async function main() {
     prisma.pricingPolicy.count(),
     prisma.coupon.count(),
     prisma.userCoupon.count(),
+    prisma.partnerDiscount.count(),
   ]);
 
   console.log('\n=== 삽입 완료 ===');
@@ -834,6 +913,7 @@ async function main() {
   console.log(`  PricingPolicy : ${cPricingPolicy}개`);
   console.log(`  Coupon        : ${cCoupon}개`);
   console.log(`  UserCoupon    : ${cUserCoupon}개`);
+  console.log(`  PartnerDiscount : ${cPartnerDiscount}개`);
 }
 
 main()

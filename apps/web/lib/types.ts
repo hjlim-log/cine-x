@@ -114,6 +114,10 @@ export type Reservation = {
       coupon: { name: string; type: string };
     };
   } | null;
+  partnerDiscountUsage?: {
+    discountAmount: number;
+    partnerDiscount?: { name: string; partnerName: string };
+  } | null;
 };
 
 export type AudienceCounts = {
@@ -129,6 +133,8 @@ export type PriceBreakdown = {
   seatBonus: number;
   subtotal: number;
   couponDiscount: number;
+  afterCouponAmount: number;
+  partnerDiscount: number;
   totalAmount: number;
   details: {
     audienceType: string;
@@ -146,6 +152,29 @@ export type PriceBreakdown = {
     type: string;
     discountAmount: number;
   };
+  appliedPartnerDiscount?: {
+    partnerDiscountId: number;
+    name: string;
+    partnerName: string;
+    partnerType: string;
+    discountMethod: string;
+    discountAmount: number;
+  };
+};
+
+export type PartnerDiscount = {
+  id: number;
+  name: string;
+  partnerType: string;
+  partnerName: string;
+  description: string | null;
+  discountMethod: 'AMOUNT' | 'PERCENT';
+  discountValue: number;
+  maxDiscount: number | null;
+  minPurchase: number;
+  combinableWithCoupon: boolean;
+  imageUrl: string | null;
+  bgColor: string | null;
 };
 
 export type Coupon = {

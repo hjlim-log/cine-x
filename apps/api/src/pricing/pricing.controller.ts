@@ -25,6 +25,7 @@ class CalculatePriceDto {
   @IsArray() @ArrayMinSize(1) @IsInt({ each: true }) seatIds: number[];
   @ValidateNested() @Type(() => AudienceCountsDto) audienceCounts: AudienceCountsDto;
   @IsOptional() @IsInt() userCouponId?: number;
+  @IsOptional() @IsInt() partnerDiscountId?: number;
 }
 
 @Controller('pricing')

@@ -32,4 +32,8 @@ export class CreateReservationDto {
   @IsOptional()
   @IsInt()
   userCouponId?: number;
+
+  @IsOptional()
+  @IsInt()
+  partnerDiscountId?: number;
 }

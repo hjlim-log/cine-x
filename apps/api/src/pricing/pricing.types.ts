@@ -16,6 +16,7 @@ export interface PriceCalculationInput {
   audienceCounts: AudienceCounts;
   userCouponId?: number;
   customerId?: number;
+  partnerDiscountId?: number;
 }
 
 export interface PriceBreakdown {
@@ -23,6 +24,8 @@ export interface PriceBreakdown {
   seatBonus: number;
   subtotal: number;
   couponDiscount: number;
+  afterCouponAmount: number;
+  partnerDiscount: number;
   totalAmount: number;
   details: {
     audienceType: AudienceType;
@@ -38,6 +41,14 @@ export interface PriceBreakdown {
     userCouponId: number;
     couponName: string;
     type: string;
+    discountAmount: number;
+  };
+  appliedPartnerDiscount?: {
+    partnerDiscountId: number;
+    name: string;
+    partnerName: string;
+    partnerType: string;
+    discountMethod: string;
     discountAmount: number;
   };
 }

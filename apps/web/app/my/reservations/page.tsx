@@ -138,9 +138,21 @@ export default function MyReservationsPage() {
                   {r.audienceCounts && (
                     <p className="text-zinc-400">관람인원: {formatAudience(r.audienceCounts)}</p>
                   )}
-                  <p className="text-red-400 font-semibold text-base pt-0.5">
-                    {r.totalAmount.toLocaleString()}원
-                  </p>
+                  <div className="pt-0.5 space-y-0.5">
+                    {r.couponUsage && r.couponUsage.discountAmount > 0 && (
+                      <p className="text-emerald-500 text-xs">
+                        쿠폰 -{r.couponUsage.discountAmount.toLocaleString()}원 ({r.couponUsage.userCoupon?.coupon.name ?? '쿠폰'})
+                      </p>
+                    )}
+                    {r.partnerDiscountUsage && r.partnerDiscountUsage.discountAmount > 0 && (
+                      <p className="text-blue-400 text-xs">
+                        {r.partnerDiscountUsage.partnerDiscount?.partnerName ?? '제휴'} -{r.partnerDiscountUsage.discountAmount.toLocaleString()}원
+                      </p>
+                    )}
+                    <p className="text-red-400 font-semibold text-base">
+                      {r.totalAmount.toLocaleString()}원
+                    </p>
+                  </div>
                 </div>
 
                 {/* 액션 버튼 영역 */}
