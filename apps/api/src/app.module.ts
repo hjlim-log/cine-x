@@ -12,6 +12,8 @@ import { PricingModule } from './pricing/pricing.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { MembershipModule } from './membership/membership.module';
 import { EventsModule } from './events/events.module';
+import { InquiriesModule } from './inquiries/inquiries.module';
+import { CustomerServiceModule } from './customer-service/customer-service.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { EventsModule } from './events/events.module';
     CouponsModule,
     MembershipModule,
     EventsModule,
+    InquiriesModule,
+    CustomerServiceModule,
   ],
 })
 export class AppModule {}

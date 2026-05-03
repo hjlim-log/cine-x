@@ -8,14 +8,16 @@ datasource db {
 }
 
 model Cinema {
-  id              Int             @id @default(autoincrement())
-  name            String
-  address         String
-  region          String
-  screens         Screen[]
-  pricingPolicies PricingPolicy[]
-  cinemaEvents    CinemaEvent[]
-  createdAt       DateTime        @default(now())
+  id               Int               @id @default(autoincrement())
+  name             String
+  address          String
+  region           String
+  screens          Screen[]
+  pricingPolicies  PricingPolicy[]
+  cinemaEvents     CinemaEvent[]
+  inquiries        Inquiry[]
+  customerServices CustomerService[]
+  createdAt        DateTime          @default(now())
 }
 
 model ScreenType {
@@ -147,6 +149,7 @@ model Customer {
   coupons             UserCoupon[]
   membershipHistory   MembershipHistory[]
   eventApplications   EventApplication[]
+  inquiries           Inquiry[]
   createdAt           DateTime              @default(now())
 }
 
@@ -465,4 +468,83 @@ model CinemaEvent {
   cinemaId Int
 
   @@unique([eventId, cinemaId])
+}
+
+model Inquiry {
+  id       Int      @id @default(autoincrement())
+
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId Int
+
+  type     String   // "ONE_ON_ONE" | "GROUP" | "LOST_ITEM"
+  category String?  // ONE_ON_ONE 전용: "CINEMA" | "MEMBERSHIP" | "RESERVATION" | "EVENT" | "OTHER"
+
+  title   String
+  content String @db.Text
+
+  status String @default("RECEIVED")
+  // "RECEIVED" | "PROCESSING" | "COMPLETED"
+
+  answer     String?   @db.Text
+  answeredAt DateTime?
+
+  cinema   Cinema? @relation(fields: [cinemaId], references: [id])
+  cinemaId Int?
+
+  notificationRead Boolean @default(false)
+
+  groupDetail    GroupInquiry?
+  lostItemDetail LostItemInquiry?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId, status])
+  @@index([type])
+}
+
+model GroupInquiry {
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  inquiryId Int     @id
+
+  groupType     String   // "GROUP_VIEWING" | "VENUE_RENTAL"
+  expectedCount Int
+  preferredDate DateTime
+  preferredTime String
+  contactPhone  String
+}
+
+model LostItemInquiry {
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  inquiryId Int     @id
+
+  lostDate        DateTime
+  lostTime        String?
+  itemCategory    String   // "PHONE" | "WALLET" | "BAG" | "GLASSES" | "CLOTHING" | "OTHER"
+  itemDescription String   @db.Text
+  lostPlace       String
+}
+
+model CustomerService {
+  id Int @id @default(autoincrement())
+
+  type String // "NOTICE" | "FAQ"
+
+  title   String
+  content String @db.Text
+
+  isImportant  Boolean @default(false)
+  noticeScope  String? // "GLOBAL" | "CINEMA"
+  cinema       Cinema? @relation(fields: [cinemaId], references: [id])
+  cinemaId     Int?
+
+  faqCategory String? // "CINEMA_USAGE" | "SPECIAL_HALL" | "RESERVATION" | "MEMBERSHIP" | "ETC"
+
+  isActive Boolean @default(true)
+  order    Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, isActive])
 }

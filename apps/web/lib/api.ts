@@ -219,3 +219,130 @@ export const drawEvent = (id: number, token: string): Promise<DrawResult> =>
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
+
+// ── 고객센터 ──────────────────────────────────────────────────────
+export type CsNotice = {
+  id: number;
+  title: string;
+  content: string;
+  isImportant: boolean;
+  noticeScope: string;
+  cinemaId: number | null;
+  cinema: { id: number; name: string } | null;
+  createdAt: string;
+};
+
+export type CsFaq = {
+  id: number;
+  faqCategory: string;
+  title: string;
+  content: string;
+  order: number;
+};
+
+export const getCsNotices = (cinemaId?: number): Promise<CsNotice[]> => {
+  const q = cinemaId ? `?cinemaId=${cinemaId}` : '';
+  return req<CsNotice[]>(`/cs/notices${q}`);
+};
+
+export const getCsNotice = (id: number): Promise<CsNotice | null> =>
+  req<CsNotice | null>(`/cs/notices/${id}`);
+
+export const getCsFaqs = (category?: string): Promise<CsFaq[]> => {
+  const q = category ? `?category=${category}` : '';
+  return req<CsFaq[]>(`/cs/faqs${q}`);
+};
+
+// ── 문의 ──────────────────────────────────────────────────────────
+export const createOneOnOneInquiry = (
+  data: { category: string; title: string; content: string; cinemaId?: number },
+  token: string,
+) => req<{ id: number }>('/inquiries/one-on-one', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${token}` },
+  body: JSON.stringify(data),
+});
+
+export const createGroupInquiry = (
+  data: {
+    title: string; content: string; cinemaId?: number;
+    groupType: string; expectedCount: number;
+    preferredDate: string; preferredTime: string; contactPhone: string;
+  },
+  token: string,
+) => req<{ id: number }>('/inquiries/group', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${token}` },
+  body: JSON.stringify(data),
+});
+
+export const createLostItemInquiry = (
+  data: {
+    title: string; content: string; cinemaId?: number;
+    lostDate: string; lostTime?: string;
+    itemCategory: string; itemDescription: string; lostPlace: string;
+  },
+  token: string,
+) => req<{ id: number }>('/inquiries/lost-item', {
+  method: 'POST',
+  headers: { Authorization: `Bearer ${token}` },
+  body: JSON.stringify(data),
+});
+
+export type InquiryItem = {
+  id: number;
+  type: 'ONE_ON_ONE' | 'GROUP' | 'LOST_ITEM';
+  category: string | null;
+  title: string;
+  status: string;
+  notificationRead: boolean;
+  createdAt: string;
+  cinema: { id: number; name: string } | null;
+};
+
+export type InquiryDetail = InquiryItem & {
+  content: string;
+  answer: string | null;
+  answeredAt: string | null;
+  groupDetail: {
+    groupType: string;
+    expectedCount: number;
+    preferredDate: string;
+    preferredTime: string;
+    contactPhone: string;
+  } | null;
+  lostItemDetail: {
+    lostDate: string;
+    lostTime: string | null;
+    itemCategory: string;
+    itemDescription: string;
+    lostPlace: string;
+  } | null;
+};
+
+export const getMyInquiries = (token: string): Promise<InquiryItem[]> =>
+  req<InquiryItem[]>('/inquiries/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const getMyInquiry = (id: number, token: string): Promise<InquiryDetail> =>
+  req<InquiryDetail>(`/inquiries/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const markInquiryRead = (id: number, token: string): Promise<void> =>
+  req<void>(`/inquiries/${id}/read`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const deleteInquiry = (id: number, token: string): Promise<void> =>
+  req<void>(`/inquiries/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const getInquiryUnreadCount = (token: string): Promise<{ count: number }> =>
+  req<{ count: number }>('/inquiries/me/unread-count', {
+    headers: { Authorization: `Bearer ${token}` },
+  });

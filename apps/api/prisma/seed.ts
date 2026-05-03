@@ -230,6 +230,106 @@ const PARTNER_DISCOUNTS = [
   },
 ];
 
+const FAQS = [
+  { type: 'FAQ', faqCategory: 'CINEMA_USAGE', title: '주차 요금은 어떻게 되나요?', content: '관람 고객에게는 영화관별로 1~3시간 무료 주차를 지원합니다. 자세한 내용은 영화관 정보 페이지를 참고해주세요.', order: 1 },
+  { type: 'FAQ', faqCategory: 'CINEMA_USAGE', title: '입장은 몇 분 전부터 가능한가요?', content: '상영 시작 약 15분 전부터 입장 가능합니다. 입장 시 모바일 티켓 또는 발권된 티켓을 제시해주세요.', order: 2 },
+  { type: 'FAQ', faqCategory: 'SPECIAL_HALL', title: '샤롯데관은 어떤 곳인가요?', content: '풀-플랫 리클라이너 좌석과 프리미엄 라운지를 제공하는 최상위 스페셜관입니다. 프리미엄 음료/스낵이 함께 제공되며, 일반관 대비 3배 정도의 요금이 적용됩니다.', order: 3 },
+  { type: 'FAQ', faqCategory: 'SPECIAL_HALL', title: '수퍼플렉스(SCREEN X)는 무엇인가요?', content: '정면 + 좌우 양면, 총 3면의 스크린으로 270도 몰입감을 선사하는 특별관입니다. 영상 제작 시 SCREEN X 포맷으로 만들어진 영화에서 효과를 가장 잘 느끼실 수 있습니다.', order: 4 },
+  { type: 'FAQ', faqCategory: 'RESERVATION', title: '예매 취소는 어떻게 하나요?', content: '마이페이지 > 예매내역에서 상영 시작 20분 전까지 직접 취소 가능합니다. 취소 수수료는 발생하지 않습니다.', order: 5 },
+  { type: 'FAQ', faqCategory: 'RESERVATION', title: '결제 수단은 어떤 것이 있나요?', content: '신용/체크카드, 카카오페이, 네이버페이, 토스페이, 계좌이체 등 다양한 결제 수단을 지원합니다. 일부 카드사는 제휴할인이 자동 적용됩니다.', order: 6 },
+  { type: 'FAQ', faqCategory: 'MEMBERSHIP', title: '등급은 어떻게 결정되나요?', content: '연간 누적 결제금액에 따라 자동으로 등급이 산정됩니다. WELCOME(신규) → VIP(5만원~) → VVIP(20만원~) → LVIP(50만원~).', order: 7 },
+  { type: 'FAQ', faqCategory: 'MEMBERSHIP', title: '쿠폰은 어떻게 사용하나요?', content: '결제 단계에서 보유 쿠폰을 선택하여 적용할 수 있습니다. 마이페이지 > 내 쿠폰에서 보유 쿠폰을 확인하실 수 있어요.', order: 8 },
+];
+
+const NOTICES: { type: string; isImportant: boolean; noticeScope: string; cinemaName?: string; title: string; content: string; order: number }[] = [
+  { type: 'NOTICE', isImportant: true,  noticeScope: 'GLOBAL', title: '5월 시스템 정기점검 안내',           content: '안녕하세요. 더 나은 서비스 제공을 위해 5월 1일 02:00 ~ 06:00 시스템 정기점검을 진행합니다. 해당 시간 동안 예매 및 결제 서비스가 일시 중단되오니 양해 부탁드립니다.', order: 1 },
+  { type: 'NOTICE', isImportant: true,  noticeScope: 'GLOBAL', title: '신규 가입 환영 쿠폰 자동 발급 안내',  content: '신규 회원으로 가입하시면 즉시 사용 가능한 3,000원 할인 쿠폰을 자동으로 발급해드립니다. 마이쿠폰에서 확인해주세요.', order: 2 },
+  { type: 'NOTICE', isImportant: false, noticeScope: 'CINEMA', cinemaName: '광교', title: '광교점 리뉴얼 오픈 안내', content: '광교점이 4월 30일 리뉴얼 오픈했습니다. 신규 스페셜관(수퍼4D)도 함께 오픈하였으니 많은 이용 부탁드립니다.', order: 3 },
+  { type: 'NOTICE', isImportant: false, noticeScope: 'GLOBAL', title: '결제 수단 추가 안내',                 content: '카카오페이, 네이버페이, 토스페이 등 다양한 간편결제를 지원합니다. 일부 카드사는 자동 제휴할인이 적용되니 결제 시 확인해주세요.', order: 4 },
+  { type: 'NOTICE', isImportant: false, noticeScope: 'GLOBAL', title: 'VIP 등급 회원 전용 이벤트 진행 중',  content: 'VIP 이상 등급 회원께 무료 관람권을 추첨으로 드리는 이벤트가 진행 중입니다. 이벤트 페이지에서 응모해주세요.', order: 5 },
+];
+
+const DEMO_INQUIRIES = [
+  {
+    type: 'ONE_ON_ONE',
+    category: 'RESERVATION',
+    title: '결제 후 환불 가능한가요?',
+    content: '실수로 두 번 결제했는데 환불 가능한가요?',
+    status: 'COMPLETED',
+    answer: '안녕하세요. 동일 회차 중복 결제의 경우 자동 환불 처리됩니다. 영업일 기준 3~5일 내 결제 카드로 환불 처리되니 잠시만 기다려주세요. 추가 문의는 1544-0000으로 연락 부탁드립니다.',
+    answeredAt: new Date('2026-04-26T10:30:00'),
+    notificationRead: false,
+  },
+  {
+    type: 'GROUP',
+    title: '50인 단체 관람 가능 여부 문의',
+    content: '회사 워크샵으로 50명 단체관람 가능한지 문의드립니다.',
+    status: 'PROCESSING',
+    notificationRead: false,
+    groupDetail: {
+      groupType: 'GROUP_VIEWING',
+      expectedCount: 50,
+      preferredDate: new Date('2026-05-15'),
+      preferredTime: '14:00',
+      contactPhone: '010-1234-5678',
+    },
+  },
+  {
+    type: 'LOST_ITEM',
+    title: '7관에서 우산 분실 신고',
+    content: '4월 21일 19:30 회차 7관에서 검정 장우산을 두고 왔습니다.',
+    status: 'COMPLETED',
+    answer: '안녕하세요. 말씀하신 시간대에 검정 장우산이 발견되어 보관 중입니다. 영화관 안내 데스크에서 본인 확인 후 수령 가능합니다. 감사합니다.',
+    answeredAt: new Date('2026-04-22T09:15:00'),
+    notificationRead: false,
+    lostItemDetail: {
+      lostDate: new Date('2026-04-21'),
+      lostTime: '19:30',
+      itemCategory: 'OTHER',
+      itemDescription: '검정 장우산, 손잡이에 작은 흠집 있음',
+      lostPlace: '7관 좌석 (B열 부근)',
+    },
+  },
+];
+
+async function seedCustomerService(cinemas: { id: number; name: string }[]) {
+  const cinemaMap = new Map(cinemas.map((c) => [c.name, c.id]));
+
+  for (const item of FAQS) {
+    await prisma.customerService.create({ data: item });
+  }
+
+  for (const { cinemaName, ...rest } of NOTICES) {
+    const cinemaId = cinemaName ? cinemaMap.get(cinemaName) : undefined;
+    await prisma.customerService.create({
+      data: { ...rest, ...(cinemaId !== undefined ? { cinemaId } : {}) },
+    });
+  }
+
+  console.log(`  CustomerService FAQ ${FAQS.length}개`);
+  console.log(`  CustomerService Notice ${NOTICES.length}개`);
+}
+
+async function seedDemoInquiries() {
+  const testUser = await prisma.customer.findUnique({ where: { email: 'test@test.com' } });
+  if (!testUser) { console.warn('  [warn] test@test.com 없음, 데모 문의 건너뜀'); return; }
+
+  for (const { groupDetail, lostItemDetail, ...inquiryData } of DEMO_INQUIRIES as any[]) {
+    const inquiry = await prisma.inquiry.create({
+      data: { ...inquiryData, customerId: testUser.id },
+    });
+
+    if (groupDetail) {
+      await prisma.groupInquiry.create({ data: { inquiryId: inquiry.id, ...groupDetail } });
+    }
+    if (lostItemDetail) {
+      await prisma.lostItemInquiry.create({ data: { inquiryId: inquiry.id, ...lostItemDetail } });
+    }
+  }
+
+  console.log(`  데모 Inquiry ${DEMO_INQUIRIES.length}개 (1:1, 단체, 분실물 각 1개)`);
+}
+
 async function seedMembershipGrades() {
   for (const grade of MEMBERSHIP_GRADES) {
     await prisma.membershipGrade.upsert({
@@ -922,6 +1022,10 @@ async function main() {
   console.log('시드 데이터 초기화 시작...');
 
   // FK 순서에 맞게 삭제
+  await prisma.groupInquiry.deleteMany();
+  await prisma.lostItemInquiry.deleteMany();
+  await prisma.inquiry.deleteMany();
+  await prisma.customerService.deleteMany();
   await prisma.movieMedia.deleteMany();
   await prisma.moviePerson.deleteMany();
   await prisma.movieGenre.deleteMany();
@@ -1181,8 +1285,12 @@ async function main() {
   // ── 8. 이벤트 시드 ────────────────────────────────────────────────
   await seedEvents(cinemas);
 
+  // ── 9. 고객센터 (FAQ + 공지) + 데모 문의 ────────────────────────
+  await seedCustomerService(cinemas);
+  await seedDemoInquiries();
+
   // ── 집계 ─────────────────────────────────────────────────────────
-  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon, cPartnerDiscount, cMembershipGrade, cMembershipReward, cEvent, cEventPrize, cCinemaEvent, cEventApplication] = await Promise.all([
+  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon, cPartnerDiscount, cMembershipGrade, cMembershipReward, cEvent, cEventPrize, cCinemaEvent, cEventApplication, cCustomerService, cInquiry] = await Promise.all([
     prisma.screenType.count(),
     prisma.seatType.count(),
     prisma.cinema.count(),
@@ -1206,6 +1314,8 @@ async function main() {
     prisma.eventPrize.count(),
     prisma.cinemaEvent.count(),
     prisma.eventApplication.count(),
+    prisma.customerService.count(),
+    prisma.inquiry.count(),
   ]);
 
   console.log('\n=== 삽입 완료 ===');
@@ -1232,6 +1342,8 @@ async function main() {
   console.log(`  EventPrize        : ${cEventPrize}개`);
   console.log(`  CinemaEvent       : ${cCinemaEvent}개`);
   console.log(`  EventApplication  : ${cEventApplication}개`);
+  console.log(`  CustomerService   : ${cCustomerService}개`);
+  console.log(`  Inquiry           : ${cInquiry}개`);
 }
 
 main()

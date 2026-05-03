@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { getMyMembership, getMyApplications } from '@/lib/api';
+import { getMyMembership, getMyApplications, getInquiryUnreadCount } from '@/lib/api';
 
 const NAV_LINKS = [
-  { label: '예매', href: '/movies' },
   { label: '영화', href: '/movies' },
   { label: '영화관', href: '/cinemas' },
   { label: '이벤트', href: '/events' },
+  { label: '고객센터', href: '/cs' },
 ];
 
 const GRADE_BADGE: Record<string, string> = {
@@ -32,21 +32,26 @@ export default function Navbar() {
     if (!token) { setGradeName(null); return; }
 
     const cached = sessionStorage.getItem('membershipGrade');
-    if (cached) { setGradeName(cached); return; }
+    if (cached) {
+      setGradeName(cached);
+    } else {
+      getMyMembership(token)
+        .then((info) => {
+          const name = info.currentGrade.name;
+          sessionStorage.setItem('membershipGrade', name);
+          setGradeName(name);
+        })
+        .catch(() => {});
+    }
 
-    getMyMembership(token)
-      .then((info) => {
-        const name = info.currentGrade.name;
-        sessionStorage.setItem('membershipGrade', name);
-        setGradeName(name);
-      })
-      .catch(() => {});
-
-    getMyApplications(token)
-      .then((apps) => {
-        setHasUnreadWin(apps.some((a) => a.status === 'WON' && !a.notificationRead));
-      })
-      .catch(() => {});
+    Promise.all([
+      getMyApplications(token).catch(() => []),
+      getInquiryUnreadCount(token).catch(() => ({ count: 0 })),
+    ]).then(([apps, unread]) => {
+      const hasWin = (apps as { status: string; notificationRead: boolean }[])
+        .some((a) => a.status === 'WON' && !a.notificationRead);
+      setHasUnreadWin(hasWin || (unread as { count: number }).count > 0);
+    });
   }, [pathname]);
 
   // 모바일 메뉴 열린 상태에서 라우트 이동 시 닫기
