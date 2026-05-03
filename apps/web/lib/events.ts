@@ -1,59 +1,89 @@
-export type Event = {
+export type EventPrize = {
+  id: number;
+  name: string;
+  description?: string | null;
+  type: string; // PHYSICAL | COUPON
+  quantity: number;
+  couponId?: number | null;
+  imageUrl?: string | null;
+  coupon?: {
+    id: number;
+    name: string;
+    description?: string | null;
+    type: string;
+    value: number;
+    bgColor?: string | null;
+  } | null;
+};
+
+export type EventApplication = {
+  id: number;
+  eventId: number;
+  customerId: number;
+  status: string; // PENDING | WON | LOST
+  prizeId?: number | null;
+  prize?: EventPrize | null;
+  userCouponId?: number | null;
+  userCoupon?: { id: number; coupon: { id: number; name: string } } | null;
+  appliedAt: string;
+  drawnAt?: string | null;
+  notificationRead: boolean;
+  // getMyApplications에서 include되는 이벤트 요약
+  event?: { id: number; title: string; imageUrl?: string | null; status: string } | null;
+};
+
+export type DrawResult = {
+  totalApplications: number;
+  winners: number;
+  losers: number;
+  winnersList: { applicationId: number; customerId: number; prizeName: string }[];
+};
+
+export type EventItem = {
   id: number;
   title: string;
   category: string;
-  period: string;
-  image: string;
   description: string;
+  imageUrl?: string | null;
+  bgColor?: string | null;
+  startDate: string;
+  endDate: string;
+  status: string;
+  isApplicable: boolean;
+  movieId?: number | null;
+  movie?: { id: number; title: string; posterUrl?: string | null } | null;
+  prizes: EventPrize[];
 };
 
-export const events: Event[] = [
-  {
-    id: 1,
-    title: '신규 가입 시 1,000원 할인쿠폰 증정',
-    category: '회원',
-    period: '2026.04.01 ~ 2026.05.31',
-    image: 'https://placehold.co/600x400/dc2626/white.png?text=Welcome+Coupon',
-    description: '신규 회원이 되시면 즉시 사용 가능한 영화 관람 1,000원 할인쿠폰을 드립니다.',
-  },
-  {
-    id: 2,
-    title: '슈퍼 마리오 갤럭시 한정판 굿즈 증정',
-    category: '영화',
-    period: '2026.04.29 ~ 2026.05.15',
-    image: 'https://placehold.co/600x400/2563eb/white.png?text=Super+Mario+Goods',
-    description: '슈퍼 마리오 갤럭시 예매 후 영화관 방문 시, 한정판 키링을 선착순 증정합니다.',
-  },
-  {
-    id: 3,
-    title: '커플 데이트 패키지 - 2인 22,000원',
-    category: '제휴',
-    period: '2026.05.01 ~ 2026.05.31',
-    image: 'https://placehold.co/600x400/db2777/white.png?text=Couple+Package',
-    description: '커플석 영화 2인 + 팝콘 콤보 1세트를 합리적인 가격에 만나보세요.',
-  },
-  {
-    id: 4,
-    title: '평일 조조 4,000원 할인',
-    category: '제휴',
-    period: '상시 진행',
-    image: 'https://placehold.co/600x400/16a34a/white.png?text=Morning+Discount',
-    description: '평일 오전 11시 이전 회차에 한해 모든 영화 4,000원 할인된 가격에 관람하실 수 있습니다.',
-  },
-  {
-    id: 5,
-    title: '5월 가정의 달 무비 페스타',
-    category: '시즌',
-    period: '2026.05.05 ~ 2026.05.31',
-    image: 'https://placehold.co/600x400/f59e0b/white.png?text=Family+Festa',
-    description: '온 가족이 즐기는 5월의 영화 한 편. 4인 가족 패키지 특가 진행 중.',
-  },
-  {
-    id: 6,
-    title: 'VIP 회원 전용 시사회 초청',
-    category: '회원',
-    period: '2026.05.10 ~ 2026.05.20',
-    image: 'https://placehold.co/600x400/7c3aed/white.png?text=VIP+Preview',
-    description: 'VIP 등급 이상 회원께 5월 신작 시사회를 초청합니다. 마이페이지에서 응모하세요.',
-  },
-];
+export type EventDetail = EventItem & {
+  cinemas: { cinema: { id: number; name: string } }[];
+  myApplication?: EventApplication | null;
+};
+
+export const CATEGORY_LABEL: Record<string, string> = {
+  MOVIE: '영화',
+  MEMBERSHIP: '멤버십',
+  PARTNER: '제휴',
+  SEASONAL: '시즌',
+  PREVIEW: '시사회',
+};
+
+export const CATEGORY_BADGE: Record<string, string> = {
+  MOVIE: 'bg-blue-900/60 text-blue-300',
+  MEMBERSHIP: 'bg-red-900/60 text-red-300',
+  PARTNER: 'bg-green-900/60 text-green-300',
+  SEASONAL: 'bg-amber-900/60 text-amber-300',
+  PREVIEW: 'bg-purple-900/60 text-purple-300',
+};
+
+export const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  ONGOING: { label: '진행 중', className: 'bg-green-900/60 text-green-300' },
+  ENDED: { label: '마감', className: 'bg-zinc-700 text-zinc-400' },
+  DRAWN: { label: '추첨 완료', className: 'bg-blue-900/60 text-blue-300' },
+  UPCOMING: { label: '예정', className: 'bg-amber-900/60 text-amber-300' },
+  CANCELLED: { label: '취소', className: 'bg-red-900/60 text-red-400' },
+};
+
+export function formatPeriod(startDate: string, endDate: string) {
+  return `${startDate.slice(0, 10).replace(/-/g, '.')} ~ ${endDate.slice(0, 10).replace(/-/g, '.')}`;
+}

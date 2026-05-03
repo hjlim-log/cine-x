@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { getMyMembership } from '@/lib/api';
+import { getMyMembership, getMyApplications } from '@/lib/api';
 
 const NAV_LINKS = [
   { label: '예매', href: '/movies' },
@@ -22,6 +22,7 @@ export default function Navbar() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [gradeName, setGradeName] = useState<string | null>(null);
+  const [hasUnreadWin, setHasUnreadWin] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -40,6 +41,12 @@ export default function Navbar() {
         setGradeName(name);
       })
       .catch(() => {});
+
+    getMyApplications(token)
+      .then((apps) => {
+        setHasUnreadWin(apps.some((a) => a.status === 'WON' && !a.notificationRead));
+      })
+      .catch(() => {});
   }, [pathname]);
 
   // 모바일 메뉴 열린 상태에서 라우트 이동 시 닫기
@@ -52,6 +59,7 @@ export default function Navbar() {
     sessionStorage.removeItem('membershipGrade');
     setLoggedIn(false);
     setGradeName(null);
+    setHasUnreadWin(false);
     router.push('/');
   }
 
@@ -89,6 +97,9 @@ export default function Navbar() {
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${GRADE_BADGE[gradeName]}`}>
                     {gradeName}
                   </span>
+                )}
+                {hasUnreadWin && (
+                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" title="새 당첨 알림" />
                 )}
               </Link>
               <button
@@ -143,6 +154,9 @@ export default function Navbar() {
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${GRADE_BADGE[gradeName]}`}>
                       {gradeName}
                     </span>
+                  )}
+                  {hasUnreadWin && (
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" title="새 당첨 알림" />
                   )}
                 </Link>
                 <button onClick={logout} className="text-left text-zinc-400 hover:text-white transition-colors">

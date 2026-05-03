@@ -2,17 +2,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import HeroSlider from '@/components/HeroSlider';
 import MovieChart from '@/components/MovieChart';
-import { fetchMovies, fetchCinemas } from '@/lib/api';
-import { events } from '@/lib/events';
+import { fetchMovies, fetchCinemas, fetchEvents } from '@/lib/api';
+import { CATEGORY_LABEL, formatPeriod, type EventItem } from '@/lib/events';
 import type { Movie, CinemaListItem } from '@/lib/types';
 
 const PLACEHOLDER = (title: string) =>
   `https://placehold.co/300x450/27272a/ffffff.png?text=${encodeURIComponent(title)}`;
 
 export default async function HomePage() {
-  const [movies, cinemas] = await Promise.all([
+  const [movies, cinemas, ongoingEvents] = await Promise.all([
     fetchMovies().catch((): Movie[] => []),
     fetchCinemas().catch((): CinemaListItem[] => []),
+    fetchEvents({ status: 'ONGOING' }).catch((): EventItem[] => []),
   ]);
 
   const heroMovies = movies.slice(0, 3);
@@ -33,25 +34,38 @@ export default async function HomePage() {
         {/* ── 3. 이벤트 ────────────────────────────── */}
         <section>
           <SectionHeader title="🎉 진행 중인 이벤트" href="/events" />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {events.slice(0, 3).map((event) => (
-              <Link key={event.id} href={`/events/${event.id}`} className="group">
-                <div className="bg-zinc-900 border border-zinc-800 hover:border-red-600 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-1">
-                  <div className="relative aspect-[3/2] bg-zinc-800">
-                    <Image src={event.image} alt={event.title} fill className="object-cover" />
-                    <div className="absolute inset-0 bg-zinc-950/0 group-hover:bg-zinc-950/10 transition-colors" />
+          {ongoingEvents.length === 0 ? (
+            <p className="text-zinc-500 text-sm">진행 중인 이벤트가 없습니다.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {ongoingEvents.slice(0, 3).map((event) => (
+                <Link key={event.id} href={`/events/${event.id}`} className="group">
+                  <div className="bg-zinc-900 border border-zinc-800 hover:border-red-600 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-1">
+                    <div className="relative aspect-[3/2] bg-zinc-800">
+                      {event.imageUrl ? (
+                        <Image src={event.imageUrl} alt={event.title} fill className="object-cover" />
+                      ) : (
+                        <div
+                          className="w-full h-full"
+                          style={{ backgroundColor: event.bgColor ?? '#27272a' }}
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-zinc-950/0 group-hover:bg-zinc-950/10 transition-colors" />
+                    </div>
+                    <div className="p-4">
+                      <span className="text-xs text-red-400 font-medium">
+                        {CATEGORY_LABEL[event.category] ?? event.category}
+                      </span>
+                      <h3 className="font-semibold text-sm mt-1 mb-1 leading-snug line-clamp-2 group-hover:text-red-400 transition-colors">
+                        {event.title}
+                      </h3>
+                      <p className="text-xs text-zinc-500">{formatPeriod(event.startDate, event.endDate)}</p>
+                    </div>
                   </div>
-                  <div className="p-4">
-                    <span className="text-xs text-red-400 font-medium">{event.category}</span>
-                    <h3 className="font-semibold text-sm mt-1 mb-1 leading-snug line-clamp-2 group-hover:text-red-400 transition-colors">
-                      {event.title}
-                    </h3>
-                    <p className="text-xs text-zinc-500">{event.period}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ── 4. 영화관 찾기 ───────────────────────── */}

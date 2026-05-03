@@ -11,7 +11,7 @@ export class MembershipService {
   constructor(private readonly prisma: PrismaService) {}
 
   async addToTotalAmount(tx: Tx, customerId: number, amount: number) {
-    const customer = await tx.customer.findUnique({
+    const customer = await tx.customer.findUniqueOrThrow({
       where: { id: customerId },
       include: { membershipGrade: true },
     });
@@ -53,7 +53,7 @@ export class MembershipService {
   }
 
   async getMyMembership(customerId: number) {
-    const customer = await this.prisma.customer.findUnique({
+    const customer = await this.prisma.customer.findUniqueOrThrow({
       where: { id: customerId },
       include: {
         membershipGrade: { include: { rewards: { include: { coupon: true } } } },

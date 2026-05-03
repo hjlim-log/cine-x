@@ -287,6 +287,205 @@ async function seedCoupons() {
   console.log(`  테스트 사용자에게 UserCoupon ${issueCodes.length}개 발급`);
 }
 
+const EVENTS_SEED = [
+  {
+    title: '슈퍼 마리오 갤럭시 한정판 굿즈 증정',
+    category: 'MOVIE',
+    description: '슈퍼 마리오 갤럭시 예매 후 영화관 방문 시, 한정판 키링을 추첨을 통해 증정합니다.',
+    imageUrl: 'https://placehold.co/600x400/2563eb/white?text=Super+Mario+Goods',
+    bgColor: '#2563eb',
+    startDate: new Date('2026-04-29'),
+    endDate: new Date('2026-05-15'),
+    status: 'ONGOING',
+    movieTitle: '슈퍼 마리오 갤럭시',
+    prizes: [
+      { name: '슈퍼 마리오 한정판 키링', type: 'PHYSICAL', quantity: 100, imageUrl: 'https://placehold.co/300x300/2563eb/white?text=Keychain' },
+      { name: '슈퍼 마리오 포스터 (대형)', type: 'PHYSICAL', quantity: 30 },
+    ],
+  },
+  {
+    title: '5월 가정의 달 10% 할인 쿠폰',
+    category: 'SEASONAL',
+    description: '5월 한정! 추첨을 통해 10% 할인 쿠폰을 증정합니다.',
+    imageUrl: 'https://placehold.co/600x400/f59e0b/white?text=Family+Festa',
+    bgColor: '#f59e0b',
+    startDate: new Date('2026-05-01'),
+    endDate: new Date('2026-05-31'),
+    status: 'ONGOING',
+    prizes: [
+      { name: '5월 가정의 달 10% 할인 쿠폰', type: 'COUPON', quantity: 1000, couponCode: 'MAY-PROMO' },
+    ],
+  },
+  {
+    title: '살목지 시사회 초청',
+    category: 'PREVIEW',
+    description: '<살목지> 정식 개봉 전 시사회에 50분을 초대합니다. 응모 후 당첨자에 한해 안내드립니다.',
+    imageUrl: 'https://placehold.co/600x400/dc2626/white?text=Salmokji+Preview',
+    bgColor: '#dc2626',
+    startDate: new Date('2026-04-01'),
+    endDate: new Date('2026-04-07'),
+    status: 'DRAWN',
+    movieTitle: '살목지',
+    prizes: [
+      { name: '<살목지> 시사회 초청권 2매', type: 'PHYSICAL', quantity: 50 },
+    ],
+  },
+  {
+    title: 'VIP 등급 회원 전용 무료 관람권',
+    category: 'MEMBERSHIP',
+    description: 'VIP 이상 등급 회원께만 드리는 특별 이벤트. 무료관람권을 추첨으로 드립니다.',
+    imageUrl: 'https://placehold.co/600x400/7c3aed/white?text=VIP+Free+Ticket',
+    bgColor: '#7c3aed',
+    startDate: new Date('2026-05-01'),
+    endDate: new Date('2026-05-31'),
+    status: 'ONGOING',
+    prizes: [
+      { name: '무료 관람권 1매', type: 'COUPON', quantity: 100, couponCode: 'FREE-MOVIE' },
+    ],
+  },
+  {
+    title: '커플 데이트 패키지 추첨',
+    category: 'SEASONAL',
+    description: '커플 무료 관람권 + 팝콘 콤보 세트를 추첨으로 증정.',
+    imageUrl: 'https://placehold.co/600x400/db2777/white?text=Couple+Package',
+    bgColor: '#db2777',
+    startDate: new Date('2026-05-01'),
+    endDate: new Date('2026-05-31'),
+    status: 'ONGOING',
+    prizes: [
+      { name: '커플 무료 관람권', type: 'COUPON', quantity: 50, couponCode: 'TWO-FREE' },
+      { name: '팝콘 콤보 세트 교환권', type: 'PHYSICAL', quantity: 100 },
+    ],
+  },
+  {
+    title: '학생 응원 이벤트',
+    category: 'PARTNER',
+    description: '학생증 인증 회원께 30% 할인 쿠폰을 추첨으로 드립니다.',
+    imageUrl: 'https://placehold.co/600x400/2563eb/white?text=Student+Cheer',
+    bgColor: '#2563eb',
+    startDate: new Date('2026-05-01'),
+    endDate: new Date('2026-06-30'),
+    status: 'ONGOING',
+    prizes: [
+      { name: '학생 30% 할인 쿠폰', type: 'COUPON', quantity: 200, couponCode: 'STUDENT-30' },
+    ],
+  },
+  {
+    title: '프로젝트 헤일메리 우주인 키링',
+    category: 'MOVIE',
+    description: 'SF 영화 <프로젝트 헤일메리> 시그니처 굿즈 증정.',
+    imageUrl: 'https://placehold.co/600x400/16a34a/white?text=Hailmary+Goods',
+    bgColor: '#16a34a',
+    startDate: new Date('2026-04-22'),
+    endDate: new Date('2026-05-22'),
+    status: 'ONGOING',
+    movieTitle: '프로젝트 헤일메리',
+    prizes: [
+      { name: '우주인 시그니처 키링', type: 'PHYSICAL', quantity: 500 },
+    ],
+  },
+  {
+    title: '신규 가입 환영 쿠폰',
+    category: 'MEMBERSHIP',
+    description: '신규 가입 회원 모두에게 자동 발급 (응모 불필요).',
+    imageUrl: 'https://placehold.co/600x400/dc2626/white?text=Welcome',
+    bgColor: '#dc2626',
+    startDate: new Date('2026-01-01'),
+    endDate: new Date('2026-12-31'),
+    status: 'ONGOING',
+    isApplicable: false,
+    prizes: [
+      { name: '환영 3,000원 할인 쿠폰', type: 'COUPON', quantity: 99999, couponCode: 'WELCOME2026' },
+    ],
+  },
+] as const;
+
+async function seedEvents(cinemas: { id: number }[]) {
+  let eventCount = 0;
+  let prizeCount = 0;
+  let cinemaEventCount = 0;
+
+  for (const eventData of EVENTS_SEED) {
+    let movieId: number | undefined;
+    if ('movieTitle' in eventData) {
+      const movie = await prisma.movie.findFirst({ where: { title: eventData.movieTitle } });
+      if (movie) movieId = movie.id;
+    }
+
+    const event = await prisma.event.create({
+      data: {
+        title: eventData.title,
+        category: eventData.category,
+        description: eventData.description,
+        imageUrl: eventData.imageUrl,
+        bgColor: eventData.bgColor,
+        startDate: eventData.startDate,
+        endDate: eventData.endDate,
+        status: eventData.status,
+        isApplicable: 'isApplicable' in eventData ? eventData.isApplicable : true,
+        ...(movieId !== undefined ? { movieId } : {}),
+      },
+    });
+    eventCount++;
+
+    for (const prizeData of eventData.prizes) {
+      let couponId: number | undefined;
+      if ('couponCode' in prizeData) {
+        const coupon = await prisma.coupon.findFirst({ where: { code: prizeData.couponCode } });
+        if (coupon) couponId = coupon.id;
+      }
+
+      await prisma.eventPrize.create({
+        data: {
+          eventId: event.id,
+          name: prizeData.name,
+          type: prizeData.type,
+          quantity: prizeData.quantity,
+          imageUrl: 'imageUrl' in prizeData ? prizeData.imageUrl : undefined,
+          ...(couponId !== undefined ? { couponId } : {}),
+        },
+      });
+      prizeCount++;
+    }
+
+    for (const cinema of cinemas) {
+      await prisma.cinemaEvent.create({ data: { eventId: event.id, cinemaId: cinema.id } });
+      cinemaEventCount++;
+    }
+  }
+
+  console.log(`  Event ${eventCount}개`);
+  console.log(`  EventPrize ${prizeCount}개`);
+  console.log(`  CinemaEvent ${cinemaEventCount}개`);
+
+  // 데모: 살목지 시사회 초청 — test@test.com 당첨, vip@test.com 낙첨
+  const salmokjiEvent = await prisma.event.findFirst({ where: { title: '살목지 시사회 초청' } });
+  const testUser = await prisma.customer.findUnique({ where: { email: 'test@test.com' } });
+  const vipUser = await prisma.customer.findUnique({ where: { email: 'vip@test.com' } });
+
+  if (salmokjiEvent && testUser && vipUser) {
+    const prize = await prisma.eventPrize.findFirst({ where: { eventId: salmokjiEvent.id } });
+    await prisma.eventApplication.create({
+      data: {
+        eventId: salmokjiEvent.id,
+        customerId: testUser.id,
+        status: 'WON',
+        prizeId: prize?.id,
+        drawnAt: new Date('2026-04-08'),
+      },
+    });
+    await prisma.eventApplication.create({
+      data: {
+        eventId: salmokjiEvent.id,
+        customerId: vipUser.id,
+        status: 'LOST',
+        drawnAt: new Date('2026-04-08'),
+      },
+    });
+    console.log('  EventApplication 데모 2개 (살목지 시사회)');
+  }
+}
+
 async function seedPricingPolicies() {
   const screenTypes = await prisma.screenType.findMany();
   const policies: {
@@ -728,10 +927,14 @@ async function main() {
   await prisma.movieGenre.deleteMany();
   await prisma.partnerDiscountUsage.deleteMany();
   await prisma.couponUsage.deleteMany();
+  await prisma.eventApplication.deleteMany();
   await prisma.userCoupon.deleteMany();
   await prisma.membershipHistory.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.reservation.deleteMany();
+  await prisma.cinemaEvent.deleteMany();
+  await prisma.eventPrize.deleteMany();
+  await prisma.event.deleteMany();
   await prisma.screening.deleteMany();
   await prisma.seat.deleteMany();
   await prisma.screen.deleteMany();
@@ -975,8 +1178,11 @@ async function main() {
   console.log(`  MoviePerson ${countMoviePerson}건`);
   console.log(`  MovieMedia ${countMovieMedia}건`);
 
+  // ── 8. 이벤트 시드 ────────────────────────────────────────────────
+  await seedEvents(cinemas);
+
   // ── 집계 ─────────────────────────────────────────────────────────
-  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon, cPartnerDiscount, cMembershipGrade, cMembershipReward] = await Promise.all([
+  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon, cPartnerDiscount, cMembershipGrade, cMembershipReward, cEvent, cEventPrize, cCinemaEvent, cEventApplication] = await Promise.all([
     prisma.screenType.count(),
     prisma.seatType.count(),
     prisma.cinema.count(),
@@ -996,28 +1202,36 @@ async function main() {
     prisma.partnerDiscount.count(),
     prisma.membershipGrade.count(),
     prisma.membershipReward.count(),
+    prisma.event.count(),
+    prisma.eventPrize.count(),
+    prisma.cinemaEvent.count(),
+    prisma.eventApplication.count(),
   ]);
 
   console.log('\n=== 삽입 완료 ===');
-  console.log(`  ScreenType      : ${cScreenType}개`);
-  console.log(`  SeatType        : ${cSeatType}개`);
-  console.log(`  Cinema          : ${cCinema}개`);
-  console.log(`  Screen          : ${cScreen}개`);
-  console.log(`  Seat            : ${cSeat}석`);
-  console.log(`  Movie           : ${cMovie}편`);
-  console.log(`  Screening       : ${cScreening}개`);
-  console.log(`  Customer        : ${cCustomer}명`);
-  console.log(`  Genre           : ${cGenre}개`);
-  console.log(`  Person          : ${cPerson}명`);
-  console.log(`  MovieGenre      : ${cMovieGenre}건`);
-  console.log(`  MoviePerson     : ${cMoviePerson}건`);
-  console.log(`  MovieMedia      : ${cMovieMedia}건`);
-  console.log(`  PricingPolicy   : ${cPricingPolicy}개`);
-  console.log(`  Coupon          : ${cCoupon}개`);
-  console.log(`  UserCoupon      : ${cUserCoupon}개`);
-  console.log(`  PartnerDiscount : ${cPartnerDiscount}개`);
-  console.log(`  MembershipGrade : ${cMembershipGrade}개`);
-  console.log(`  MembershipReward: ${cMembershipReward}개`);
+  console.log(`  ScreenType        : ${cScreenType}개`);
+  console.log(`  SeatType          : ${cSeatType}개`);
+  console.log(`  Cinema            : ${cCinema}개`);
+  console.log(`  Screen            : ${cScreen}개`);
+  console.log(`  Seat              : ${cSeat}석`);
+  console.log(`  Movie             : ${cMovie}편`);
+  console.log(`  Screening         : ${cScreening}개`);
+  console.log(`  Customer          : ${cCustomer}명`);
+  console.log(`  Genre             : ${cGenre}개`);
+  console.log(`  Person            : ${cPerson}명`);
+  console.log(`  MovieGenre        : ${cMovieGenre}건`);
+  console.log(`  MoviePerson       : ${cMoviePerson}건`);
+  console.log(`  MovieMedia        : ${cMovieMedia}건`);
+  console.log(`  PricingPolicy     : ${cPricingPolicy}개`);
+  console.log(`  Coupon            : ${cCoupon}개`);
+  console.log(`  UserCoupon        : ${cUserCoupon}개`);
+  console.log(`  PartnerDiscount   : ${cPartnerDiscount}개`);
+  console.log(`  MembershipGrade   : ${cMembershipGrade}개`);
+  console.log(`  MembershipReward  : ${cMembershipReward}개`);
+  console.log(`  Event             : ${cEvent}개`);
+  console.log(`  EventPrize        : ${cEventPrize}개`);
+  console.log(`  CinemaEvent       : ${cCinemaEvent}개`);
+  console.log(`  EventApplication  : ${cEventApplication}개`);
 }
 
 main()

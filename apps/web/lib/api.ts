@@ -13,6 +13,7 @@ import type {
   MembershipGrade,
   MembershipResult,
 } from './types';
+import type { EventItem, EventDetail, EventApplication, DrawResult } from './events';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -172,4 +173,49 @@ export const applyReservationPartnerDiscount = (
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(partnerDiscountId ? { partnerDiscountId } : {}),
+  });
+
+// ── 이벤트 (서버 컴포넌트용) ──────────────────────────────────────
+export function fetchEvents(filter?: { category?: string; status?: string }): Promise<EventItem[]> {
+  const params = new URLSearchParams();
+  if (filter?.category) params.set('category', filter.category);
+  if (filter?.status) params.set('status', filter.status);
+  const q = params.toString();
+  return fetch(`${API}/events${q ? `?${q}` : ''}`, { next: { revalidate: 30 } } as RequestInit)
+    .then((r) => { if (!r.ok) throw new Error(); return r.json(); });
+}
+
+// ── 이벤트 (클라이언트 컴포넌트용) ───────────────────────────────
+export const getEvents = (filter?: { category?: string; status?: string }): Promise<EventItem[]> => {
+  const params = new URLSearchParams();
+  if (filter?.category) params.set('category', filter.category);
+  if (filter?.status) params.set('status', filter.status);
+  const q = params.toString();
+  return req<EventItem[]>(`/events${q ? `?${q}` : ''}`);
+};
+
+export const getEvent = (id: number, token?: string | null): Promise<EventDetail> =>
+  req<EventDetail>(`/events/${id}`, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
+
+export const applyEvent = (id: number, token: string): Promise<EventApplication> =>
+  req<EventApplication>(`/events/${id}/apply`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const getMyApplications = (token: string): Promise<EventApplication[]> =>
+  req<EventApplication[]>('/events/me/applications', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const markApplicationRead = (id: number, token: string): Promise<EventApplication> =>
+  req<EventApplication>(`/events/applications/${id}/read`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const drawEvent = (id: number, token: string): Promise<DrawResult> =>
+  req<DrawResult>(`/events/${id}/draw`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
   });

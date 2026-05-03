@@ -14,6 +14,7 @@ model Cinema {
   region          String
   screens         Screen[]
   pricingPolicies PricingPolicy[]
+  cinemaEvents    CinemaEvent[]
   createdAt       DateTime        @default(now())
 }
 
@@ -71,6 +72,7 @@ model Movie {
   genres      MovieGenre[]
   people      MoviePerson[]
   media       MovieMedia[]
+  events      Event[]
 }
 
 model Genre {
@@ -133,18 +135,19 @@ model Screening {
 }
 
 model Customer {
-  id                Int                 @id @default(autoincrement())
-  email             String              @unique
-  password          String
-  name              String
-  phone             String?
-  totalAmount       Int                 @default(0)
-  membershipGrade   MembershipGrade     @relation(fields: [gradeId], references: [id])
-  gradeId           Int                 @default(1)
-  reservations      Reservation[]
-  coupons           UserCoupon[]
-  membershipHistory MembershipHistory[]
-  createdAt         DateTime            @default(now())
+  id                  Int                   @id @default(autoincrement())
+  email               String                @unique
+  password            String
+  name                String
+  phone               String?
+  totalAmount         Int                   @default(0)
+  membershipGrade     MembershipGrade       @relation(fields: [gradeId], references: [id])
+  gradeId             Int                   @default(1)
+  reservations        Reservation[]
+  coupons             UserCoupon[]
+  membershipHistory   MembershipHistory[]
+  eventApplications   EventApplication[]
+  createdAt           DateTime              @default(now())
 }
 
 model Reservation {
@@ -229,6 +232,7 @@ model Coupon {
 
   userCoupons       UserCoupon[]
   membershipRewards MembershipReward[]
+  eventPrizes       EventPrize[]
 
   @@index([issuePolicy, isActive])
 }
@@ -249,7 +253,8 @@ model UserCoupon {
   expiresAt  DateTime
   usedAt     DateTime?
 
-  usage      CouponUsage?
+  usage            CouponUsage?
+  eventApplication EventApplication?
 
   @@index([customerId, status])
 }
@@ -362,4 +367,102 @@ model MembershipHistory {
   changedAt   DateTime @default(now())
 
   @@index([customerId])
+}
+
+model Event {
+  id           Int                @id @default(autoincrement())
+
+  title        String
+  category     String             // "MOVIE" | "MEMBERSHIP" | "PARTNER" | "SEASONAL" | "PREVIEW"
+  description  String             @db.Text
+
+  imageUrl     String?
+  bgColor      String?
+
+  startDate    DateTime
+  endDate      DateTime
+
+  status       String             @default("UPCOMING")
+  // "UPCOMING": 시작 전
+  // "ONGOING": 진행 중 (응모 가능)
+  // "ENDED": 종료, 추첨 대기
+  // "DRAWN": 추첨 완료
+  // "CANCELLED": 취소
+
+  isApplicable Boolean            @default(true)
+
+  movie        Movie?             @relation(fields: [movieId], references: [id])
+  movieId      Int?
+
+  prizes       EventPrize[]
+  applications EventApplication[]
+  cinemas      CinemaEvent[]
+
+  drawnAt      DateTime?
+
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([status, startDate])
+}
+
+model EventPrize {
+  id          Int                @id @default(autoincrement())
+
+  event       Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     Int
+
+  name        String
+  description String?
+  type        String             // "PHYSICAL" | "COUPON"
+  quantity    Int
+
+  coupon      Coupon?            @relation(fields: [couponId], references: [id])
+  couponId    Int?
+
+  imageUrl    String?
+
+  applications EventApplication[]
+
+  @@index([eventId])
+}
+
+model EventApplication {
+  id         Int         @id @default(autoincrement())
+
+  event      Event       @relation(fields: [eventId], references: [id])
+  eventId    Int
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  customerId Int
+
+  status     String      @default("PENDING")
+  // "PENDING": 응모 완료, 추첨 대기
+  // "WON": 당첨
+  // "LOST": 낙첨
+
+  prize      EventPrize? @relation(fields: [prizeId], references: [id])
+  prizeId    Int?
+
+  userCoupon   UserCoupon? @relation(fields: [userCouponId], references: [id])
+  userCouponId Int?        @unique
+
+  appliedAt        DateTime @default(now())
+  drawnAt          DateTime?
+  notificationRead Boolean  @default(false)
+
+  @@unique([eventId, customerId])
+  @@index([customerId, status])
+}
+
+model CinemaEvent {
+  id       Int    @id @default(autoincrement())
+
+  event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId  Int
+
+  cinema   Cinema @relation(fields: [cinemaId], references: [id])
+  cinemaId Int
+
+  @@unique([eventId, cinemaId])
 }
