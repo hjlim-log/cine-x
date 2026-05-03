@@ -133,14 +133,18 @@ model Screening {
 }
 
 model Customer {
-  id           Int           @id @default(autoincrement())
-  email        String        @unique
-  password     String
-  name         String
-  phone        String?
-  reservations Reservation[]
-  coupons      UserCoupon[]
-  createdAt    DateTime      @default(now())
+  id                Int                 @id @default(autoincrement())
+  email             String              @unique
+  password          String
+  name              String
+  phone             String?
+  totalAmount       Int                 @default(0)
+  membershipGrade   MembershipGrade     @relation(fields: [gradeId], references: [id])
+  gradeId           Int                 @default(1)
+  reservations      Reservation[]
+  coupons           UserCoupon[]
+  membershipHistory MembershipHistory[]
+  createdAt         DateTime            @default(now())
 }
 
 model Reservation {
@@ -223,7 +227,8 @@ model Coupon {
 
   createdAt   DateTime     @default(now())
 
-  userCoupons UserCoupon[]
+  userCoupons       UserCoupon[]
+  membershipRewards MembershipReward[]
 
   @@index([issuePolicy, isActive])
 }
@@ -305,4 +310,56 @@ model PartnerDiscountUsage {
   discountAmount    Int
 
   usedAt            DateTime        @default(now())
+}
+
+model MembershipGrade {
+  id              Int                @id @default(autoincrement())
+
+  name            String             @unique  // "WELCOME" | "VIP" | "VVIP" | "LVIP"
+  displayName     String             // "웰컴" | "VIP" | "VVIP" | "LVIP"
+  description     String?
+
+  minAmount       Int                @default(0)
+  maxAmount       Int?
+
+  discountPercent Int                @default(0)
+  maxDiscount     Int?
+
+  bgColor         String?
+  iconUrl         String?
+
+  rewards         MembershipReward[]
+  customers       Customer[]
+
+  @@index([minAmount])
+}
+
+model MembershipReward {
+  id        Int             @id @default(autoincrement())
+
+  grade     MembershipGrade @relation(fields: [gradeId], references: [id])
+  gradeId   Int
+
+  coupon    Coupon          @relation(fields: [couponId], references: [id])
+  couponId  Int
+
+  quantity  Int             @default(1)
+
+  @@unique([gradeId, couponId])
+}
+
+model MembershipHistory {
+  id          Int      @id @default(autoincrement())
+
+  customer    Customer @relation(fields: [customerId], references: [id])
+  customerId  Int
+
+  fromGrade   String?
+  toGrade     String
+  changeType  String   // "UPGRADE" | "DOWNGRADE" | "INITIAL"
+
+  totalAmount Int
+  changedAt   DateTime @default(now())
+
+  @@index([customerId])
 }

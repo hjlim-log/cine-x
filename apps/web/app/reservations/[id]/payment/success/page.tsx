@@ -22,13 +22,21 @@ function SuccessContent() {
     const token = localStorage.getItem('token') ?? '';
 
     confirmPayment({ paymentKey, orderId, amount }, token)
-      .then(({ reservationId }) => {
-        router.replace(`/reservations/complete?id=${reservationId}`);
+      .then(({ reservationId, membershipResult }) => {
+        // 결제 후 등급이 바뀔 수 있으므로 Navbar 캐시 무효화
+        sessionStorage.removeItem('membershipGrade');
+        let url = `/reservations/complete?id=${reservationId}`;
+        if (membershipResult?.upgraded) {
+          url += `&upgraded=true&fromGrade=${encodeURIComponent(membershipResult.oldGrade)}&toGrade=${encodeURIComponent(membershipResult.newGrade)}`;
+        }
+        router.replace(url);
       })
       .catch((e) => {
         const msg = e instanceof Error ? e.message : '결제 확인에 실패했습니다.';
+        // 백엔드 메시지에 "자동 취소" 포함 = 제휴할인 카드사 불일치로 환불된 케이스
+        const reason = msg.includes('자동 취소') ? 'partner-mismatch' : 'other';
         router.replace(
-          `/reservations/${params.id}/payment/fail?message=${encodeURIComponent(msg)}`,
+          `/reservations/${params.id}/payment/fail?reason=${reason}&message=${encodeURIComponent(msg)}`,
         );
       });
   }, []);

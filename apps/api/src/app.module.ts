@@ -10,6 +10,7 @@ import { CinemasModule } from './cinemas/cinemas.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PricingModule } from './pricing/pricing.module';
 import { CouponsModule } from './coupons/coupons.module';
+import { MembershipModule } from './membership/membership.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { CouponsModule } from './coupons/coupons.module';
     PaymentsModule,
     PricingModule,
     CouponsModule,
+    MembershipModule,
   ],
 })
 export class AppModule {}

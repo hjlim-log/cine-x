@@ -134,6 +134,8 @@ export type PriceBreakdown = {
   subtotal: number;
   couponDiscount: number;
   afterCouponAmount: number;
+  membershipDiscount: number;
+  afterMembershipAmount: number;
   partnerDiscount: number;
   totalAmount: number;
   details: {
@@ -152,6 +154,11 @@ export type PriceBreakdown = {
     type: string;
     discountAmount: number;
   };
+  appliedMembership?: {
+    gradeName: string;
+    discountPercent: number;
+    discountAmount: number;
+  };
   appliedPartnerDiscount?: {
     partnerDiscountId: number;
     name: string;
@@ -160,6 +167,52 @@ export type PriceBreakdown = {
     discountMethod: string;
     discountAmount: number;
   };
+};
+
+export type MembershipGrade = {
+  id: number;
+  name: string;
+  displayName: string;
+  description: string | null;
+  minAmount: number;
+  maxAmount: number | null;
+  discountPercent: number;
+  maxDiscount: number | null;
+  bgColor: string | null;
+  rewards: {
+    id: number;
+    quantity: number;
+    coupon: {
+      name: string;
+      type: string;
+      value: number;
+      maxDiscount: number | null;
+    };
+  }[];
+};
+
+export type MembershipHistory = {
+  id: number;
+  fromGrade: string | null;
+  toGrade: string;
+  changeType: 'UPGRADE' | 'DOWNGRADE' | 'INITIAL';
+  totalAmount: number;
+  changedAt: string;
+};
+
+export type MembershipInfo = {
+  currentGrade: MembershipGrade;
+  totalAmount: number;
+  nextGrade: MembershipGrade | null;
+  amountToNext: number | null;
+  history: MembershipHistory[];
+};
+
+export type MembershipResult = {
+  oldGrade: string;
+  newGrade: string;
+  upgraded: boolean;
+  totalAmount: number;
 };
 
 export type PartnerDiscount = {

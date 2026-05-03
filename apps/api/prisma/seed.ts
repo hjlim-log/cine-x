@@ -46,6 +46,56 @@ const PRICING_MATRIX: Record<string, Record<string, Record<string, Record<string
   },
 };
 
+const MEMBERSHIP_GRADES = [
+  {
+    name: 'WELCOME',
+    displayName: '웰컴',
+    description: '환영합니다!',
+    minAmount: 0,
+    maxAmount: 49999,
+    discountPercent: 0,
+    bgColor: '#6b7280',
+  },
+  {
+    name: 'VIP',
+    displayName: 'VIP',
+    description: '연 5만원 이상 결제 시',
+    minAmount: 50000,
+    maxAmount: 199999,
+    discountPercent: 3,
+    maxDiscount: 3000,
+    bgColor: '#dc2626',
+  },
+  {
+    name: 'VVIP',
+    displayName: 'VVIP',
+    description: '연 20만원 이상 결제 시',
+    minAmount: 200000,
+    maxAmount: 499999,
+    discountPercent: 5,
+    maxDiscount: 5000,
+    bgColor: '#7c3aed',
+  },
+  {
+    name: 'LVIP',
+    displayName: 'LVIP',
+    description: '연 50만원 이상 결제 시',
+    minAmount: 500000,
+    maxAmount: null,
+    discountPercent: 7,
+    maxDiscount: 8000,
+    bgColor: '#fbbf24',
+  },
+];
+
+const MEMBERSHIP_REWARD_LINKS = [
+  { gradeName: 'VIP',  couponCode: 'WELCOME2026',   quantity: 1 },
+  { gradeName: 'VVIP', couponCode: 'MAY-PROMO',     quantity: 1 },
+  { gradeName: 'VVIP', couponCode: 'BIRTHDAY-GIFT', quantity: 1 },
+  { gradeName: 'LVIP', couponCode: 'FREE-MOVIE',    quantity: 1 },
+  { gradeName: 'LVIP', couponCode: 'TWO-FREE',      quantity: 1 },
+];
+
 const COUPONS = [
   {
     code: 'WELCOME2026',
@@ -179,6 +229,31 @@ const PARTNER_DISCOUNTS = [
     imageUrl: 'https://placehold.co/200x130/ed1c24/white?text=Lotte',
   },
 ];
+
+async function seedMembershipGrades() {
+  for (const grade of MEMBERSHIP_GRADES) {
+    await prisma.membershipGrade.upsert({
+      where: { name: grade.name },
+      create: grade,
+      update: grade,
+    });
+  }
+  console.log(`  MembershipGrade ${MEMBERSHIP_GRADES.length}개`);
+}
+
+async function seedMembershipRewards() {
+  for (const link of MEMBERSHIP_REWARD_LINKS) {
+    const grade = await prisma.membershipGrade.findUnique({ where: { name: link.gradeName } });
+    const coupon = await prisma.coupon.findUnique({ where: { code: link.couponCode } });
+    if (!grade || !coupon) continue;
+    await prisma.membershipReward.upsert({
+      where: { gradeId_couponId: { gradeId: grade.id, couponId: coupon.id } },
+      create: { gradeId: grade.id, couponId: coupon.id, quantity: link.quantity },
+      update: { quantity: link.quantity },
+    });
+  }
+  console.log(`  MembershipReward ${MEMBERSHIP_REWARD_LINKS.length}개`);
+}
 
 async function seedPartnerDiscounts() {
   for (const pd of PARTNER_DISCOUNTS) {
@@ -654,6 +729,7 @@ async function main() {
   await prisma.partnerDiscountUsage.deleteMany();
   await prisma.couponUsage.deleteMany();
   await prisma.userCoupon.deleteMany();
+  await prisma.membershipHistory.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.reservation.deleteMany();
   await prisma.screening.deleteMany();
@@ -666,9 +742,14 @@ async function main() {
   await prisma.screenType.deleteMany();
   await prisma.person.deleteMany();
   await prisma.genre.deleteMany();
+  await prisma.membershipReward.deleteMany();
   await prisma.coupon.deleteMany();
   await prisma.partnerDiscount.deleteMany();
+  // membershipGrade는 customer FK 때문에 삭제하지 않고 upsert 사용
   // customer는 삭제하지 않음 — ID 유지로 기존 JWT 토큰 호환
+
+  // ── 0. 멤버십 등급 (Customer FK 때문에 가장 먼저) ─────────────────
+  await seedMembershipGrades();
 
   // ── 1. 상영관 유형 / 좌석 유형 ────────────────────────────────────
   const [stNormal, stCharlotte, stSuperflex, stSuper4D] = await Promise.all([
@@ -812,17 +893,36 @@ async function main() {
 
   // ── 6. 테스트 계정 ────────────────────────────────────────────────
   const hashedPassword = await bcrypt.hash('password123', 10);
+  const [welcomeGrade, vipGrade, vvipGrade] = await Promise.all([
+    prisma.membershipGrade.findUnique({ where: { name: 'WELCOME' } }),
+    prisma.membershipGrade.findUnique({ where: { name: 'VIP' } }),
+    prisma.membershipGrade.findUnique({ where: { name: 'VVIP' } }),
+  ]);
+
   await prisma.customer.upsert({
     where: { email: 'test@test.com' },
-    create: { email: 'test@test.com', password: hashedPassword, name: '테스트유저', phone: '010-1234-5678' },
-    update: {},
+    create: { email: 'test@test.com', password: hashedPassword, name: '테스트유저', phone: '010-1234-5678', gradeId: welcomeGrade!.id, totalAmount: 0 },
+    update: { gradeId: welcomeGrade!.id, totalAmount: 0 },
   });
-  console.log('  테스트 계정: test@test.com / password123');
+  await prisma.customer.upsert({
+    where: { email: 'vip@test.com' },
+    create: { email: 'vip@test.com', password: hashedPassword, name: 'VIP유저', gradeId: vipGrade!.id, totalAmount: 75000 },
+    update: { gradeId: vipGrade!.id, totalAmount: 75000 },
+  });
+  await prisma.customer.upsert({
+    where: { email: 'vvip@test.com' },
+    create: { email: 'vvip@test.com', password: hashedPassword, name: 'VVIP유저', gradeId: vvipGrade!.id, totalAmount: 250000 },
+    update: { gradeId: vvipGrade!.id, totalAmount: 250000 },
+  });
+  console.log('  테스트 계정: test@test.com / vip@test.com / vvip@test.com (password123)');
 
   // ── 6-b. 쿠폰 마스터 + 테스트 사용자 발급 ────────────────────────
   await seedCoupons();
 
-  // ── 6-c. 제휴할인 마스터 데이터 ──────────────────────────────────
+  // ── 6-c. 멤버십 리워드 (쿠폰 생성 후에) ──────────────────────────
+  await seedMembershipRewards();
+
+  // ── 6-d. 제휴할인 마스터 데이터 ──────────────────────────────────
   await seedPartnerDiscounts();
 
   // ── 7. 영화 메타데이터 (장르/감독/배우/트레일러) ──────────────────
@@ -876,7 +976,7 @@ async function main() {
   console.log(`  MovieMedia ${countMovieMedia}건`);
 
   // ── 집계 ─────────────────────────────────────────────────────────
-  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon, cPartnerDiscount] = await Promise.all([
+  const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon, cPartnerDiscount, cMembershipGrade, cMembershipReward] = await Promise.all([
     prisma.screenType.count(),
     prisma.seatType.count(),
     prisma.cinema.count(),
@@ -894,26 +994,30 @@ async function main() {
     prisma.coupon.count(),
     prisma.userCoupon.count(),
     prisma.partnerDiscount.count(),
+    prisma.membershipGrade.count(),
+    prisma.membershipReward.count(),
   ]);
 
   console.log('\n=== 삽입 완료 ===');
-  console.log(`  ScreenType    : ${cScreenType}개`);
-  console.log(`  SeatType      : ${cSeatType}개`);
-  console.log(`  Cinema        : ${cCinema}개`);
-  console.log(`  Screen        : ${cScreen}개`);
-  console.log(`  Seat          : ${cSeat}석`);
-  console.log(`  Movie         : ${cMovie}편`);
-  console.log(`  Screening     : ${cScreening}개`);
-  console.log(`  Customer      : ${cCustomer}명`);
-  console.log(`  Genre         : ${cGenre}개`);
-  console.log(`  Person        : ${cPerson}명`);
-  console.log(`  MovieGenre    : ${cMovieGenre}건`);
-  console.log(`  MoviePerson   : ${cMoviePerson}건`);
-  console.log(`  MovieMedia    : ${cMovieMedia}건`);
-  console.log(`  PricingPolicy : ${cPricingPolicy}개`);
-  console.log(`  Coupon        : ${cCoupon}개`);
-  console.log(`  UserCoupon    : ${cUserCoupon}개`);
+  console.log(`  ScreenType      : ${cScreenType}개`);
+  console.log(`  SeatType        : ${cSeatType}개`);
+  console.log(`  Cinema          : ${cCinema}개`);
+  console.log(`  Screen          : ${cScreen}개`);
+  console.log(`  Seat            : ${cSeat}석`);
+  console.log(`  Movie           : ${cMovie}편`);
+  console.log(`  Screening       : ${cScreening}개`);
+  console.log(`  Customer        : ${cCustomer}명`);
+  console.log(`  Genre           : ${cGenre}개`);
+  console.log(`  Person          : ${cPerson}명`);
+  console.log(`  MovieGenre      : ${cMovieGenre}건`);
+  console.log(`  MoviePerson     : ${cMoviePerson}건`);
+  console.log(`  MovieMedia      : ${cMovieMedia}건`);
+  console.log(`  PricingPolicy   : ${cPricingPolicy}개`);
+  console.log(`  Coupon          : ${cCoupon}개`);
+  console.log(`  UserCoupon      : ${cUserCoupon}개`);
   console.log(`  PartnerDiscount : ${cPartnerDiscount}개`);
+  console.log(`  MembershipGrade : ${cMembershipGrade}개`);
+  console.log(`  MembershipReward: ${cMembershipReward}개`);
 }
 
 main()

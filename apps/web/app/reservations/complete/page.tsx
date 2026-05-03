@@ -19,10 +19,56 @@ function formatAudience(counts: AudienceCounts): string {
   return parts.join(', ') + ` (총 ${total}명)`;
 }
 
+const GRADE_STYLE: Record<string, { gradient: string }> = {
+  VIP:  { gradient: 'from-red-500 to-red-800' },
+  VVIP: { gradient: 'from-violet-500 to-violet-800' },
+  LVIP: { gradient: 'from-amber-400 to-amber-600' },
+};
+
+function UpgradeModal({ fromGrade, toGrade, onClose }: { fromGrade: string; toGrade: string; onClose: () => void }) {
+  const style = GRADE_STYLE[toGrade] ?? { gradient: 'from-zinc-500 to-zinc-700' };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-7 max-w-sm w-full text-center shadow-2xl">
+        <div className={`w-20 h-20 bg-gradient-to-br ${style.gradient} rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+          <span className="text-3xl">🎉</span>
+        </div>
+        <h2 className="text-xl font-black mb-1">등급 승급!</h2>
+        <p className="text-zinc-400 text-sm mb-5">축하합니다! 멤버십 등급이 올라갔어요.</p>
+        <div className="flex items-center justify-center gap-3 mb-6 text-lg font-bold">
+          <span className="text-zinc-400">{fromGrade}</span>
+          <span className="text-zinc-600">→</span>
+          <span className="text-white">{toGrade}</span>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/my/coupons"
+            onClick={onClose}
+            className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+          >
+            쿠폰 확인
+          </Link>
+          <button
+            onClick={onClose}
+            className={`flex-1 bg-gradient-to-r ${style.gradient} text-white text-sm font-semibold py-2.5 rounded-lg transition-opacity hover:opacity-90`}
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CompleteContent() {
   const searchParams = useSearchParams();
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [error, setError] = useState('');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const upgraded = searchParams.get('upgraded') === 'true';
+  const fromGrade = searchParams.get('fromGrade') ?? '';
+  const toGrade = searchParams.get('toGrade') ?? '';
 
   useEffect(() => {
     const id = Number(searchParams.get('id'));
@@ -32,7 +78,10 @@ function CompleteContent() {
       return;
     }
     getReservation(id, token)
-      .then(setReservation)
+      .then((r) => {
+        setReservation(r);
+        if (upgraded && fromGrade && toGrade) setShowUpgradeModal(true);
+      })
       .catch(() => setError('예매 정보를 불러오는 데 실패했습니다.'));
   }, []);
 
@@ -54,6 +103,13 @@ function CompleteContent() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-8">
+      {showUpgradeModal && (
+        <UpgradeModal
+          fromGrade={fromGrade}
+          toGrade={toGrade}
+          onClose={() => setShowUpgradeModal(false)}
+        />
+      )}
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-red-600/10 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { loadTossPayments, ANONYMOUS } from '@tosspayments/tosspayments-sdk';
 import {
@@ -38,7 +38,9 @@ function formatCountdown(ms: number): string {
 export default function PaymentPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const reservationId = params.id as string;
+  const clearPartnerDiscount = searchParams.get('clearPartnerDiscount') === 'true';
 
   const [pageState, setPageState] = useState<PageState>('loading');
   const [reservation, setReservation] = useState<Reservation | null>(null);
@@ -64,8 +66,9 @@ export default function PaymentPage() {
       router.replace(`/login?redirect=/reservations/${reservationId}/payment`);
       return;
     }
-    getReservation(Number(reservationId), token)
-      .then((r) => {
+    (async () => {
+      try {
+        let r = await getReservation(Number(reservationId), token);
         if (r.status === 'PAID') {
           router.replace(`/reservations/complete?id=${r.id}`);
           return;
@@ -73,6 +76,15 @@ export default function PaymentPage() {
         if (r.status !== 'PENDING') {
           setPageState('invalid');
           return;
+        }
+        // clearPartnerDiscount=true: 제휴할인 해제 후 totalAmount 갱신
+        if (clearPartnerDiscount) {
+          try {
+            const newBreakdown = await applyReservationPartnerDiscount(Number(reservationId), undefined, token);
+            r = { ...r, totalAmount: newBreakdown.totalAmount };
+            setBreakdown(newBreakdown);
+            setSelectedPartnerDiscountId(null);
+          } catch {}
         }
         const age = Date.now() - new Date(r.createdAt).getTime();
         if (age >= PENDING_TTL_MS) {
@@ -82,12 +94,12 @@ export default function PaymentPage() {
         }
         setReservation(r);
         setPageState('ready');
-      })
-      .catch(() => {
+      } catch {
         setFetchError('예매 정보를 불러올 수 없습니다.');
         setPageState('error');
-      });
-  }, [reservationId, router]);
+      }
+    })();
+  }, [reservationId, router, clearPartnerDiscount]);
 
   // 카운트다운 인터벌
   useEffect(() => {
@@ -133,7 +145,7 @@ export default function PaymentPage() {
     partnerDiscountsFetched.current = true;
     const token = localStorage.getItem('token');
     if (!token) return;
-    getApplicablePartnerDiscounts(breakdown.afterCouponAmount, token)
+    getApplicablePartnerDiscounts(breakdown.afterMembershipAmount ?? breakdown.afterCouponAmount, token)
       .then(setPartnerDiscounts)
       .catch(() => {});
   }, [breakdown]);
@@ -321,11 +333,28 @@ export default function PaymentPage() {
                 />
               )}
 
-              {/* 쿠폰 + 제휴할인 둘 다 있을 때 중간 소계 표시 */}
-              {breakdown.couponDiscount > 0 && breakdown.partnerDiscount > 0 && (
+              {/* 쿠폰 + (멤버십 or 제휴) 둘 다 있을 때 중간 소계 */}
+              {breakdown.couponDiscount > 0 && (breakdown.membershipDiscount > 0 || breakdown.partnerDiscount > 0) && (
                 <>
                   <Divider />
                   <ReceiptRow label="쿠폰 적용 후" value={`${breakdown.afterCouponAmount.toLocaleString()}원`} />
+                </>
+              )}
+
+              {/* 멤버십 할인 */}
+              {breakdown.membershipDiscount > 0 && (
+                <ReceiptRow
+                  label={`멤버십 (${breakdown.appliedMembership?.gradeName ?? ''}) ${breakdown.appliedMembership?.discountPercent ?? 0}%`}
+                  value={`-${breakdown.membershipDiscount.toLocaleString()}원`}
+                  color="violet"
+                />
+              )}
+
+              {/* 멤버십 + 제휴할인 둘 다 있을 때 중간 소계 */}
+              {breakdown.membershipDiscount > 0 && breakdown.partnerDiscount > 0 && (
+                <>
+                  <Divider />
+                  <ReceiptRow label="멤버십 적용 후" value={`${breakdown.afterMembershipAmount.toLocaleString()}원`} />
                 </>
               )}
 
@@ -396,13 +425,18 @@ export default function PaymentPage() {
 
           {/* 적용된 할인 정보 */}
           {selectedPartnerDiscountId !== null && breakdown?.appliedPartnerDiscount && (
-            <div className="mt-3 pt-3 border-t border-zinc-800 flex items-center justify-between">
-              <span className="text-sm text-zinc-300 truncate mr-2">
-                {breakdown.appliedPartnerDiscount.name}
-              </span>
-              <span className="text-sm font-semibold text-blue-400 shrink-0">
-                -{breakdown.appliedPartnerDiscount.discountAmount.toLocaleString()}원
-              </span>
+            <div className="mt-3 pt-3 border-t border-zinc-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-zinc-300 truncate mr-2">
+                  {breakdown.appliedPartnerDiscount.name}
+                </span>
+                <span className="text-sm font-semibold text-blue-400 shrink-0">
+                  -{breakdown.appliedPartnerDiscount.discountAmount.toLocaleString()}원
+                </span>
+              </div>
+              <p className="text-xs text-amber-500/90 leading-relaxed">
+                선택하신 카드로 결제하지 않으면 할인이 적용되지 않을 수 있습니다.
+              </p>
             </div>
           )}
 
@@ -462,12 +496,13 @@ function ReceiptRow({
   label: string;
   value: string;
   bold?: boolean;
-  color?: 'emerald' | 'blue' | 'red';
+  color?: 'emerald' | 'blue' | 'red' | 'violet';
 }) {
   const colorClass =
     color === 'emerald' ? 'text-emerald-400' :
     color === 'blue' ? 'text-blue-400' :
-    color === 'red' ? 'text-red-400' : '';
+    color === 'red' ? 'text-red-400' :
+    color === 'violet' ? 'text-violet-400' : '';
   return (
     <div className={`flex justify-between gap-4 py-0.5 ${bold ? 'font-semibold' : ''} ${colorClass || ''}`}>
       <span className={!color && !bold ? 'text-zinc-400' : ''}>{label}</span>

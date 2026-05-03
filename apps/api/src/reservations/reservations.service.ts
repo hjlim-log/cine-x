@@ -9,6 +9,7 @@ import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PricingService } from '../pricing/pricing.service';
+import { MembershipService } from '../membership/membership.service';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 
 const PENDING_TTL_MS = 10 * 60 * 1000; // 10분
@@ -18,6 +19,7 @@ export class ReservationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService,
+    private readonly membershipService: MembershipService,
   ) {}
 
   async create(customerId: number, dto: CreateReservationDto) {
@@ -268,6 +270,9 @@ export class ReservationsService {
           data: { status: 'AVAILABLE' },
         });
         await tx.couponUsage.delete({ where: { id: reservation.couponUsage.id } });
+      }
+      if (reservation.status === 'PAID') {
+        await this.membershipService.subtractFromTotalAmount(tx, reservation.customerId, reservation.totalAmount);
       }
       return tx.reservation.update({
         where: { id },

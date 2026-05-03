@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import { getMyMembership } from '@/lib/api';
 
 const NAV_LINKS = [
   { label: '예매', href: '/movies' },
@@ -11,14 +12,34 @@ const NAV_LINKS = [
   { label: '이벤트', href: '/events' },
 ];
 
+const GRADE_BADGE: Record<string, string> = {
+  VIP:  'bg-red-700 text-red-100',
+  VVIP: 'bg-violet-700 text-violet-100',
+  LVIP: 'bg-amber-500 text-amber-950',
+};
+
 export default function Navbar() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [gradeName, setGradeName] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    setLoggedIn(!!localStorage.getItem('token'));
+    const token = localStorage.getItem('token');
+    setLoggedIn(!!token);
+    if (!token) { setGradeName(null); return; }
+
+    const cached = sessionStorage.getItem('membershipGrade');
+    if (cached) { setGradeName(cached); return; }
+
+    getMyMembership(token)
+      .then((info) => {
+        const name = info.currentGrade.name;
+        sessionStorage.setItem('membershipGrade', name);
+        setGradeName(name);
+      })
+      .catch(() => {});
   }, [pathname]);
 
   // 모바일 메뉴 열린 상태에서 라우트 이동 시 닫기
@@ -28,7 +49,9 @@ export default function Navbar() {
 
   function logout() {
     localStorage.removeItem('token');
+    sessionStorage.removeItem('membershipGrade');
     setLoggedIn(false);
+    setGradeName(null);
     router.push('/');
   }
 
@@ -60,8 +83,13 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-4 text-sm">
           {loggedIn ? (
             <>
-              <Link href="/my/reservations" className={navLinkClass('/my')}>
+              <Link href="/my/reservations" className={`flex items-center gap-1.5 ${navLinkClass('/my')}`}>
                 마이페이지
+                {gradeName && GRADE_BADGE[gradeName] && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${GRADE_BADGE[gradeName]}`}>
+                    {gradeName}
+                  </span>
+                )}
               </Link>
               <button
                 onClick={logout}
@@ -109,8 +137,13 @@ export default function Navbar() {
           <div className="border-t border-zinc-800 pt-3 flex flex-col gap-3">
             {loggedIn ? (
               <>
-                <Link href="/my/reservations" className={navLinkClass('/my')}>
+                <Link href="/my/reservations" className={`flex items-center gap-1.5 ${navLinkClass('/my')}`}>
                   마이페이지
+                  {gradeName && GRADE_BADGE[gradeName] && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${GRADE_BADGE[gradeName]}`}>
+                      {gradeName}
+                    </span>
+                  )}
                 </Link>
                 <button onClick={logout} className="text-left text-zinc-400 hover:text-white transition-colors">
                   로그아웃

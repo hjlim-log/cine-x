@@ -193,7 +193,38 @@ export class PricingService {
 
     const afterCouponAmount = subtotal - couponDiscount;
 
-    // 10. 제휴할인 적용
+    // 10. 멤버십 할인 (자동 적용)
+    let membershipDiscount = 0;
+    let appliedMembership: PriceBreakdown['appliedMembership'];
+
+    if (input.customerId) {
+      const customer = await this.prisma.customer.findUnique({
+        where: { id: input.customerId },
+        include: { membershipGrade: true },
+      });
+
+      const grade = customer?.membershipGrade;
+      if (grade && grade.discountPercent > 0) {
+        let calculated = Math.floor((afterCouponAmount * grade.discountPercent) / 100);
+        if (grade.maxDiscount && calculated > grade.maxDiscount) {
+          calculated = grade.maxDiscount;
+        }
+        calculated = Math.min(calculated, afterCouponAmount);
+
+        if (calculated > 0) {
+          membershipDiscount = calculated;
+          appliedMembership = {
+            gradeName: grade.displayName,
+            discountPercent: grade.discountPercent,
+            discountAmount: membershipDiscount,
+          };
+        }
+      }
+    }
+
+    const afterMembershipAmount = afterCouponAmount - membershipDiscount;
+
+    // 11. 제휴할인 적용 (minPurchase 기준: afterMembershipAmount)
     let partnerDiscount = 0;
     let appliedPartnerDiscount: PriceBreakdown['appliedPartnerDiscount'];
 
@@ -214,23 +245,23 @@ export class PricingService {
         throw new BadRequestException('쿠폰과 함께 사용할 수 없는 제휴할인입니다.');
       }
 
-      if (afterCouponAmount < pd.minPurchase) {
+      if (afterMembershipAmount < pd.minPurchase) {
         throw new BadRequestException(
-          `최소 ${pd.minPurchase.toLocaleString()}원 이상 결제 시 사용 가능합니다. (쿠폰 적용 후 ${afterCouponAmount.toLocaleString()}원)`,
+          `최소 ${pd.minPurchase.toLocaleString()}원 이상 결제 시 사용 가능합니다. (멤버십 할인 후 ${afterMembershipAmount.toLocaleString()}원)`,
         );
       }
 
       if (pd.discountMethod === 'AMOUNT') {
         partnerDiscount = pd.discountValue;
       } else if (pd.discountMethod === 'PERCENT') {
-        let calculated = Math.floor((afterCouponAmount * pd.discountValue) / 100);
+        let calculated = Math.floor((afterMembershipAmount * pd.discountValue) / 100);
         if (pd.maxDiscount && calculated > pd.maxDiscount) {
           calculated = pd.maxDiscount;
         }
         partnerDiscount = calculated;
       }
 
-      partnerDiscount = Math.min(partnerDiscount, afterCouponAmount);
+      partnerDiscount = Math.min(partnerDiscount, afterMembershipAmount);
 
       appliedPartnerDiscount = {
         partnerDiscountId: pd.id,
@@ -248,11 +279,14 @@ export class PricingService {
       subtotal,
       couponDiscount,
       afterCouponAmount,
+      membershipDiscount,
+      afterMembershipAmount,
       partnerDiscount,
-      totalAmount: afterCouponAmount - partnerDiscount,
+      totalAmount: afterMembershipAmount - partnerDiscount,
       details,
       seatDetails,
       appliedCoupon,
+      appliedMembership,
       appliedPartnerDiscount,
     };
   }

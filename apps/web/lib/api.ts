@@ -9,6 +9,9 @@ import type {
   PriceBreakdown,
   UserCoupon,
   PartnerDiscount,
+  MembershipInfo,
+  MembershipGrade,
+  MembershipResult,
 } from './types';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -102,8 +105,8 @@ export const getReservation = (id: number, token: string): Promise<Reservation> 
 export const confirmPayment = (
   data: { paymentKey: string; orderId: string; amount: number },
   token: string,
-): Promise<{ reservationId: number; status: string }> =>
-  req<{ reservationId: number; status: string }>('/payments/confirm', {
+): Promise<{ reservationId: number; status: string; membershipResult?: MembershipResult }> =>
+  req<{ reservationId: number; status: string; membershipResult?: MembershipResult }>('/payments/confirm', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -150,6 +153,15 @@ export const getApplicablePartnerDiscounts = (
   req<PartnerDiscount[]>(`/partner-discounts/applicable?amount=${amount}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+
+// ── 멤버십 ────────────────────────────────────────────────────────
+export const getMyMembership = (token: string): Promise<MembershipInfo> =>
+  req<MembershipInfo>('/membership/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+export const getMembershipGrades = (): Promise<MembershipGrade[]> =>
+  req<MembershipGrade[]>('/membership/grades');
 
 export const applyReservationPartnerDiscount = (
   reservationId: number,

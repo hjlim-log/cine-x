@@ -8,7 +8,45 @@ import Spinner from '@/components/Spinner';
 function FailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const reason = searchParams.get('reason') ?? 'other';
   const message = searchParams.get('message') ?? '결제에 실패했습니다.';
+
+  if (reason === 'partner-mismatch') {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center">
+        <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </div>
+
+        <h1 className="text-2xl font-bold text-amber-400 mb-3">결제가 자동 취소되었습니다</h1>
+        <p className="text-zinc-300 text-sm mb-8 break-words leading-relaxed">{message}</p>
+
+        <div className="flex flex-col gap-3">
+          <Link
+            href={`/reservations/${params.id}/payment`}
+            className="px-5 py-3 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition-colors"
+          >
+            올바른 카드로 다시 결제하기
+          </Link>
+          <Link
+            href={`/reservations/${params.id}/payment`}
+            className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors"
+          >
+            제휴할인 변경하고 결제
+          </Link>
+          <Link
+            href={`/reservations/${params.id}/payment?clearPartnerDiscount=true`}
+            className="px-5 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors text-zinc-400"
+          >
+            할인 없이 결제
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto px-4 py-16 text-center">

@@ -25,6 +25,8 @@ export interface PriceBreakdown {
   subtotal: number;
   couponDiscount: number;
   afterCouponAmount: number;
+  membershipDiscount: number;
+  afterMembershipAmount: number;
   partnerDiscount: number;
   totalAmount: number;
   details: {
@@ -41,6 +43,11 @@ export interface PriceBreakdown {
     userCouponId: number;
     couponName: string;
     type: string;
+    discountAmount: number;
+  };
+  appliedMembership?: {
+    gradeName: string;
+    discountPercent: number;
     discountAmount: number;
   };
   appliedPartnerDiscount?: {
