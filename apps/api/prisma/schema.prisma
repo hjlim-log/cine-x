@@ -151,6 +151,10 @@ model Customer {
   membershipHistory   MembershipHistory[]
   eventApplications   EventApplication[]
   inquiries           Inquiry[]
+  isActive            Boolean               @default(true)
+  deactivatedAt       DateTime?
+  deactivatedBy       String?               // "USER" or "ADMIN"
+  deactivateReason    String?               @db.Text
   createdAt           DateTime              @default(now())
 }
 

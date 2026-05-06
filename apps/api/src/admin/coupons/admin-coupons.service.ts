@@ -91,6 +91,13 @@ export class AdminCouponsService {
       throw new BadRequestException('사용할 수 없는 쿠폰입니다.');
     }
 
+    const alreadyHas = await this.prisma.userCoupon.findFirst({
+      where: { customerId: customer.id, couponId: coupon.id, status: 'AVAILABLE' },
+    });
+    if (alreadyHas) {
+      throw new BadRequestException(`${dto.email}은(는) 이미 해당 쿠폰을 보유하고 있습니다.`);
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const userCoupon = await tx.userCoupon.create({
         data: {

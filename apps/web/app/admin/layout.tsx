@@ -4,14 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { href: string; label: string; icon: string; disabled?: boolean }[] = [
   { href: '/admin', label: '대시보드', icon: '📊' },
   { href: '/admin/movies', label: '영화 관리', icon: '🎬' },
   { href: '/admin/screenings', label: '상영 스케줄', icon: '🎫' },
   { href: '/admin/events', label: '이벤트 관리', icon: '🎁' },
   { href: '/admin/coupons', label: '쿠폰 관리', icon: '🎟️' },
   { href: '/admin/inquiries', label: '문의 답변', icon: '💬' },
-  { href: '/admin/customers', label: '회원 관리', icon: '👥', disabled: true },
+  { href: '/admin/customers', label: '회원 관리', icon: '👥' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -8,6 +8,8 @@ import { AdminCouponsController } from './coupons/admin-coupons.controller';
 import { AdminCouponsService } from './coupons/admin-coupons.service';
 import { AdminInquiriesController } from './inquiries/admin-inquiries.controller';
 import { AdminInquiriesService } from './inquiries/admin-inquiries.service';
+import { AdminCustomersController } from './customers/admin-customers.controller';
+import { AdminCustomersService } from './customers/admin-customers.service';
 import { EventsModule } from '../events/events.module';
 
 @Module({
@@ -18,12 +20,14 @@ import { EventsModule } from '../events/events.module';
     AdminEventsController,
     AdminCouponsController,
     AdminInquiriesController,
+    AdminCustomersController,
   ],
   providers: [
     AdminMoviesService,
     AdminScreeningsService,
     AdminCouponsService,
     AdminInquiriesService,
+    AdminCustomersService,
   ],
 })
 export class AdminModule {}

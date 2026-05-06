@@ -41,6 +41,10 @@ export class AuthService {
     });
     if (!customer) throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
 
+    if (!customer.isActive) {
+      throw new UnauthorizedException('비활성화된 계정입니다. 고객센터로 문의해주세요.');
+    }
+
     const valid = await bcrypt.compare(dto.password, customer.password);
     if (!valid) throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
 

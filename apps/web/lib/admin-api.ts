@@ -389,3 +389,138 @@ export const adminAnswerInquiry = (
     method: 'PATCH',
     body: JSON.stringify(data),
   });
+
+// ─── Customers ────────────────────────────────────────────────────────────────
+
+export type AdminCustomer = {
+  id: number;
+  email: string;
+  name: string;
+  phone: string | null;
+  role: string;
+  totalAmount: number;
+  isActive: boolean;
+  deactivatedAt: string | null;
+  createdAt: string;
+  membershipGrade: { name: string; displayName: string; bgColor: string | null };
+  _count: {
+    reservations: number;
+    coupons: number;
+    inquiries: number;
+    eventApplications: number;
+  };
+};
+
+export type AdminCustomerListResponse = {
+  customers: AdminCustomer[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export const adminListCustomers = (params?: {
+  search?: string;
+  gradeNames?: string[];
+  includeInactive?: boolean;
+  page?: number;
+  pageSize?: number;
+}): Promise<AdminCustomerListResponse> => {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set('search', params.search);
+  if (params?.gradeNames?.length) {
+    params.gradeNames.forEach((g) => qs.append('gradeNames', g));
+  }
+  if (params?.includeInactive) qs.set('includeInactive', 'true');
+  if (params?.page) qs.set('page', String(params.page));
+  if (params?.pageSize) qs.set('pageSize', String(params.pageSize));
+  const q = qs.toString();
+  return req<AdminCustomerListResponse>(`/admin/customers${q ? `?${q}` : ''}`);
+};
+
+export const adminDeactivateCustomer = (
+  id: number,
+  data?: { reason?: string },
+): Promise<AdminCustomer> =>
+  req<AdminCustomer>(`/admin/customers/${id}/deactivate`, {
+    method: 'PATCH',
+    body: JSON.stringify(data ?? {}),
+  });
+
+export const adminReactivateCustomer = (id: number): Promise<AdminCustomer> =>
+  req<AdminCustomer>(`/admin/customers/${id}/reactivate`, { method: 'PATCH' });
+
+export type AdminCustomerDetail = Omit<AdminCustomer, 'membershipGrade'> & {
+  deactivateReason: string | null;
+  membershipGrade: {
+    id: number;
+    name: string;
+    displayName: string;
+    bgColor: string | null;
+    discountPercent: number;
+    minAmount: number;
+    maxAmount: number | null;
+  };
+  membershipHistory: {
+    id: number;
+    fromGrade: string | null;
+    toGrade: string;
+    changeType: string;
+    totalAmount: number;
+    changedAt: string;
+  }[];
+  reservations: {
+    id: number;
+    orderId: string;
+    totalAmount: number;
+    status: string;
+    createdAt: string;
+    screening: {
+      startTime: string;
+      movie: { title: string; posterUrl: string | null };
+      screen: { name: string; cinema: { name: string } };
+    };
+  }[];
+  coupons: {
+    id: number;
+    status: string;
+    issuedAt: string;
+    expiresAt: string;
+    usedAt: string | null;
+    coupon: { id: number; name: string; type: string; value: number; code: string };
+  }[];
+  eventApplications: {
+    id: number;
+    status: string;
+    appliedAt: string;
+    event: { title: string };
+    prize: { name: string } | null;
+  }[];
+  inquiries: {
+    id: number;
+    type: string;
+    title: string;
+    status: string;
+    createdAt: string;
+  }[];
+  stats: {
+    totalReservations: number;
+    paidReservations: number;
+    totalCoupons: number;
+    availableCoupons: number;
+  };
+};
+
+export const adminGetCustomer = (id: number): Promise<AdminCustomerDetail> =>
+  req<AdminCustomerDetail>(`/admin/customers/${id}`);
+
+export const adminChangeCustomerGrade = (
+  id: number,
+  data: { gradeId: number; reason: string },
+): Promise<{ message: string; reason: string }> =>
+  req<{ message: string; reason: string }>(`/admin/customers/${id}/grade`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
