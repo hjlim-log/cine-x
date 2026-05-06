@@ -181,17 +181,43 @@ export class AdminScreeningsService {
   }
 
   async delete(id: number) {
-    const reservations = await this.prisma.reservation.count({
-      where: { screeningId: id, status: { in: ['PENDING', 'PAID'] } },
+    return this.prisma.$transaction(async (tx) => {
+      const activeReservations = await tx.reservation.count({
+        where: {
+          screeningId: id,
+          status: { in: ['PENDING', 'PAID'] },
+        },
+      });
+
+      if (activeReservations > 0) {
+        throw new BadRequestException(
+          `진행 중인 예매가 ${activeReservations}건 있어 삭제할 수 없습니다.`,
+        );
+      }
+
+      const reservationIds = await tx.reservation.findMany({
+        where: { screeningId: id },
+        select: { id: true },
+      });
+      const ids = reservationIds.map((r) => r.id);
+
+      if (ids.length > 0) {
+        await tx.couponUsage.deleteMany({
+          where: { reservationId: { in: ids } },
+        });
+        await tx.partnerDiscountUsage.deleteMany({
+          where: { reservationId: { in: ids } },
+        });
+        await tx.ticket.deleteMany({
+          where: { reservationId: { in: ids } },
+        });
+        await tx.reservation.deleteMany({
+          where: { screeningId: id },
+        });
+      }
+
+      return tx.screening.delete({ where: { id } });
     });
-
-    if (reservations > 0) {
-      throw new BadRequestException(
-        `진행 중인 예매가 ${reservations}건 있어 삭제할 수 없습니다.`,
-      );
-    }
-
-    return this.prisma.screening.delete({ where: { id } });
   }
 
   async getCinemasWithScreens() {
