@@ -210,3 +210,182 @@ export const adminGetEventApplications = (id: number): Promise<AdminEventApplica
 
 export const adminDrawEvent = (id: number): Promise<AdminDrawResult> =>
   req<AdminDrawResult>(`/admin/events/${id}/draw`, { method: 'POST' });
+
+// ─── Coupons ──────────────────────────────────────────────────────────────────
+
+export type CouponStats = {
+  issued: number;
+  used: number;
+  available: number;
+  expired: number;
+};
+
+export type AdminCoupon = {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  type: 'AMOUNT_DISCOUNT' | 'PERCENT_DISCOUNT' | 'FREE_TICKET';
+  value: number;
+  minPurchase: number | null;
+  maxDiscount: number | null;
+  validDays: number;
+  issuePolicy: 'WELCOME' | 'CODE' | 'MANUAL' | 'EVENT';
+  imageUrl: string | null;
+  bgColor: string | null;
+  isActive: boolean;
+  totalIssued: number;
+  createdAt: string;
+  stats: CouponStats;
+};
+
+export type AdminCouponDetail = AdminCoupon & {
+  _count: { userCoupons: number };
+};
+
+export type CouponCreateData = {
+  code: string;
+  name: string;
+  description?: string;
+  type: string;
+  value: number;
+  minPurchase?: number;
+  maxDiscount?: number;
+  validDays?: number;
+  issuePolicy: string;
+  bgColor?: string;
+};
+
+export type CouponUpdateData = {
+  name?: string;
+  description?: string;
+  value?: number;
+  minPurchase?: number;
+  maxDiscount?: number;
+  validDays?: number;
+};
+
+export const adminListCoupons = (): Promise<AdminCoupon[]> =>
+  req<AdminCoupon[]>('/admin/coupons');
+
+export const adminGetCoupon = (id: number): Promise<AdminCouponDetail> =>
+  req<AdminCouponDetail>(`/admin/coupons/${id}`);
+
+export const adminCreateCoupon = (data: CouponCreateData): Promise<AdminCouponDetail> =>
+  req<AdminCouponDetail>('/admin/coupons', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const adminUpdateCoupon = (
+  id: number,
+  data: CouponUpdateData,
+): Promise<AdminCouponDetail> =>
+  req<AdminCouponDetail>(`/admin/coupons/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+
+export const adminDeactivateCoupon = (id: number): Promise<AdminCouponDetail> =>
+  req<AdminCouponDetail>(`/admin/coupons/${id}/deactivate`, { method: 'PATCH' });
+
+export type IssueCouponData = { couponId: number; email: string };
+
+export const adminIssueCoupon = (data: IssueCouponData): Promise<{ id: number }> =>
+  req<{ id: number }>('/admin/coupons/issue', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export type BulkIssueCouponData = {
+  couponId: number;
+  gradeNames?: string[];
+  joinedAfter?: string;
+  joinedBefore?: string;
+};
+
+export type BulkIssuePreviewItem = {
+  id: number;
+  email: string;
+  name: string;
+  createdAt: string;
+  totalAmount: number;
+  alreadyHas: boolean;
+  membershipGrade: { name: string; displayName: string } | null;
+};
+
+export type BulkIssueResult = { issued: number; skipped: number };
+
+export const adminBulkIssuePreview = (
+  data: BulkIssueCouponData,
+): Promise<BulkIssuePreviewItem[]> =>
+  req<BulkIssuePreviewItem[]>('/admin/coupons/bulk-issue/preview', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const adminBulkIssueExecute = (data: {
+  couponId: number;
+  customerIds: number[];
+}): Promise<BulkIssueResult> =>
+  req<BulkIssueResult>('/admin/coupons/bulk-issue/execute', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+// ─── Inquiries ────────────────────────────────────────────────────────────────
+
+export type AdminInquiryGroupDetail = {
+  groupType: string;
+  expectedCount: number;
+  preferredDate: string;
+  preferredTime: string;
+  contactPhone: string;
+};
+
+export type AdminInquiryLostDetail = {
+  lostDate: string;
+  lostTime: string | null;
+  itemCategory: string;
+  itemDescription: string;
+  lostPlace: string;
+};
+
+export type AdminInquiry = {
+  id: number;
+  type: 'ONE_ON_ONE' | 'GROUP' | 'LOST_ITEM';
+  category: string | null;
+  title: string;
+  content: string;
+  status: 'RECEIVED' | 'PROCESSING' | 'COMPLETED';
+  answer: string | null;
+  answeredAt: string | null;
+  createdAt: string;
+  customer: { email: string; name: string };
+  cinema: { name: string } | null;
+  groupDetail: AdminInquiryGroupDetail | null;
+  lostItemDetail: AdminInquiryLostDetail | null;
+};
+
+export const adminListInquiries = (params?: {
+  status?: string;
+  type?: string;
+}): Promise<AdminInquiry[]> => {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set('status', params.status);
+  if (params?.type) qs.set('type', params.type);
+  const q = qs.toString();
+  return req<AdminInquiry[]>(`/admin/inquiries${q ? `?${q}` : ''}`);
+};
+
+export const adminGetInquiry = (id: number): Promise<AdminInquiry> =>
+  req<AdminInquiry>(`/admin/inquiries/${id}`);
+
+export const adminAnswerInquiry = (
+  id: number,
+  data: { answer: string; status?: string },
+): Promise<AdminInquiry> =>
+  req<AdminInquiry>(`/admin/inquiries/${id}/answer`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });

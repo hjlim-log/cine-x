@@ -9,8 +9,8 @@ const NAV_ITEMS = [
   { href: '/admin/movies', label: '영화 관리', icon: '🎬' },
   { href: '/admin/screenings', label: '상영 스케줄', icon: '🎫' },
   { href: '/admin/events', label: '이벤트 관리', icon: '🎁' },
-  { href: '/admin/coupons', label: '쿠폰 관리', icon: '🎟️', disabled: true },
-  { href: '/admin/inquiries', label: '문의 답변', icon: '💬', disabled: true },
+  { href: '/admin/coupons', label: '쿠폰 관리', icon: '🎟️' },
+  { href: '/admin/inquiries', label: '문의 답변', icon: '💬' },
   { href: '/admin/customers', label: '회원 관리', icon: '👥', disabled: true },
 ];
 
