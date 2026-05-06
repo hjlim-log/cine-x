@@ -14,12 +14,14 @@ import { MembershipModule } from './membership/membership.module';
 import { EventsModule } from './events/events.module';
 import { InquiriesModule } from './inquiries/inquiries.module';
 import { CustomerServiceModule } from './customer-service/customer-service.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
+    AdminModule,
     MoviesModule,
     ScreeningsModule,
     ReservationsModule,

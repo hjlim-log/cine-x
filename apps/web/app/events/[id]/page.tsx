@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getEvent, applyEvent, drawEvent } from '@/lib/api';
+import { getEvent, applyEvent } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import {
   CATEGORY_LABEL,
@@ -12,7 +12,6 @@ import {
   type EventDetail,
   type EventApplication,
   type EventPrize,
-  type DrawResult,
 } from '@/lib/events';
 
 function formatDate(d: string) {
@@ -174,62 +173,12 @@ function ApplySection({
   );
 }
 
-function DrawModal({ result, onClose }: { result: DrawResult; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={onClose}>
-      <div
-        className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 max-w-sm w-full space-y-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-center">
-          <p className="text-2xl mb-1">🎉</p>
-          <h3 className="text-lg font-bold">추첨 완료!</h3>
-        </div>
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-zinc-800 rounded-xl p-3">
-            <p className="text-2xl font-bold text-white">{result.totalApplications}</p>
-            <p className="text-zinc-400 text-xs mt-0.5">총 응모</p>
-          </div>
-          <div className="bg-amber-900/40 rounded-xl p-3">
-            <p className="text-2xl font-bold text-amber-300">{result.winners}</p>
-            <p className="text-zinc-400 text-xs mt-0.5">당첨</p>
-          </div>
-          <div className="bg-zinc-800 rounded-xl p-3">
-            <p className="text-2xl font-bold text-zinc-400">{result.losers}</p>
-            <p className="text-zinc-400 text-xs mt-0.5">낙첨</p>
-          </div>
-        </div>
-        {result.winnersList.length > 0 && (
-          <div className="bg-zinc-800/50 rounded-xl p-3 space-y-1.5 max-h-40 overflow-y-auto">
-            <p className="text-xs font-semibold text-zinc-400 mb-2">당첨자 목록</p>
-            {result.winnersList.map((w) => (
-              <div key={w.applicationId} className="flex justify-between text-xs">
-                <span className="text-zinc-300">고객 #{w.customerId}</span>
-                <span className="text-amber-300">{w.prizeName}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <button
-          onClick={onClose}
-          className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition-colors"
-        >
-          확인
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function EventDetailPage({ params }: { params: { id: string } }) {
   const [token, setToken] = useState<string | null>(null);
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [myApplication, setMyApplication] = useState<EventApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [drawing, setDrawing] = useState(false);
-  const [drawResult, setDrawResult] = useState<DrawResult | null>(null);
-
   const reload = (t: string | null) => {
     getEvent(Number(params.id), t)
       .then((data) => {
@@ -250,20 +199,6 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [params.id]);
-
-  const handleDraw = async () => {
-    if (!token || !event) return;
-    setDrawing(true);
-    try {
-      const result = await drawEvent(event.id, token);
-      setDrawResult(result);
-      reload(token);
-    } catch (e: any) {
-      toast(e.message ?? '추첨 중 오류가 발생했습니다.', 'error');
-    } finally {
-      setDrawing(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -292,9 +227,6 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-      {drawResult && (
-        <DrawModal result={drawResult} onClose={() => setDrawResult(null)} />
-      )}
       <Link href="/events" className="text-zinc-400 hover:text-white text-sm mb-6 inline-block">
         ← 이벤트 목록
       </Link>
@@ -371,24 +303,6 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             </div>
           )}
 
-          {/* 데모용 추첨 버튼 */}
-          {token && (event.status === 'ONGOING' || event.status === 'ENDED') && (
-            <div className="border border-dashed border-zinc-700 rounded-xl p-4 space-y-2">
-              <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                [DEMO] 관리자 추첨
-              </p>
-              <p className="text-zinc-500 text-xs">
-                Phase 7 관리자 페이지에서 정식 제공 예정. 데모용으로 여기서 추첨을 실행합니다.
-              </p>
-              <button
-                onClick={handleDraw}
-                disabled={drawing}
-                className="w-full bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-200 text-sm font-medium py-2 rounded-lg transition-colors"
-              >
-                {drawing ? '추첨 진행 중...' : '추첨 실행하기'}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* 우측: 응모 사이드바 */}

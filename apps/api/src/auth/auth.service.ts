@@ -31,7 +31,7 @@ export class AuthService {
 
     await this.couponsService.issueWelcomeCoupons(customer.id);
 
-    const token = this.sign(customer.id, customer.email);
+    const token = this.sign(customer.id, customer.email, customer.role);
     return { token };
   }
 
@@ -44,12 +44,12 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, customer.password);
     if (!valid) throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
 
-    const token = this.sign(customer.id, customer.email);
+    const token = this.sign(customer.id, customer.email, customer.role);
     const { password: _pw, ...user } = customer;
     return { token, user };
   }
 
-  private sign(id: number, email: string): string {
-    return this.jwt.sign({ sub: id, email });
+  private sign(id: number, email: string, role: string): string {
+    return this.jwt.sign({ sub: id, email, role });
   }
 }

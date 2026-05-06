@@ -1,0 +1,126 @@
+/* react-big-calendar 다크 테마 오버라이드 */
+.rbc-calendar {
+  color: #e2e8f0;
+  background: transparent;
+}
+.rbc-toolbar {
+  background: transparent;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rbc-toolbar button {
+  color: #cbd5e1;
+  background: #1e293b;
+  border-color: #334155;
+  border-radius: 6px;
+}
+.rbc-toolbar button:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button.rbc-active:hover,
+.rbc-toolbar button.rbc-active:focus {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: white;
+}
+.rbc-toolbar .rbc-toolbar-label {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+.rbc-month-view,
+.rbc-time-view {
+  background: #0f172a;
+  border-color: #1e293b;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.rbc-header {
+  color: #94a3b8;
+  border-color: #1e293b;
+  background: #0f172a;
+  padding: 10px 0;
+  font-weight: 500;
+}
+.rbc-header + .rbc-header {
+  border-color: #1e293b;
+}
+.rbc-time-header-content {
+  border-color: #1e293b;
+}
+.rbc-time-content {
+  border-color: #1e293b;
+}
+.rbc-time-gutter,
+.rbc-label {
+  color: #64748b;
+  background: #0f172a;
+  font-size: 11px;
+}
+.rbc-today {
+  background: rgba(220, 38, 38, 0.08) !important;
+}
+.rbc-time-slot {
+  color: #64748b;
+  border-color: #1e293b;
+}
+.rbc-timeslot-group {
+  border-color: #1e293b;
+}
+.rbc-day-slot .rbc-time-slot {
+  border-color: #1e293b;
+}
+.rbc-day-bg + .rbc-day-bg {
+  border-color: #1e293b;
+}
+.rbc-month-row + .rbc-month-row {
+  border-color: #1e293b;
+}
+.rbc-off-range-bg {
+  background: rgba(15, 23, 42, 0.6);
+}
+.rbc-off-range {
+  color: #475569;
+}
+.rbc-date-cell {
+  color: #94a3b8;
+  padding: 4px 8px;
+}
+.rbc-date-cell.rbc-now {
+  color: #f87171;
+  font-weight: 700;
+}
+.rbc-event {
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.rbc-event:focus {
+  outline: none;
+}
+.rbc-selected {
+  background: #b91c1c !important;
+}
+.rbc-show-more {
+  color: #ef4444;
+  background: transparent;
+  font-size: 11px;
+}
+.rbc-current-time-indicator {
+  background: #ef4444;
+  height: 2px;
+}
+.rbc-agenda-view table.rbc-agenda-table {
+  border-color: #1e293b;
+  color: #e2e8f0;
+}
+.rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+  border-color: #1e293b;
+}
+.rbc-agenda-view table.rbc-agenda-table thead {
+  background: #1e293b;
+  color: #94a3b8;
+}

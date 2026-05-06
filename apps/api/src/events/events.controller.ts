@@ -63,10 +63,4 @@ export class EventsController {
     return this.eventsService.apply(user.id, id);
   }
 
-  // POST /events/:id/draw (데모용, 추후 admin role 추가)
-  @Post(':id/draw')
-  @UseGuards(JwtAuthGuard)
-  draw(@Param('id', ParseIntPipe) id: number) {
-    return this.eventsService.drawWinners(id);
-  }
 }

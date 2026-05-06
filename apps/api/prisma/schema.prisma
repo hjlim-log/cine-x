@@ -142,6 +142,7 @@ model Customer {
   password            String
   name                String
   phone               String?
+  role                String                @default("USER")  // "USER" | "ADMIN"
   totalAmount         Int                   @default(0)
   membershipGrade     MembershipGrade       @relation(fields: [gradeId], references: [id])
   gradeId             Int                   @default(1)

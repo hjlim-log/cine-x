@@ -1289,6 +1289,22 @@ async function main() {
   await seedCustomerService(cinemas);
   await seedDemoInquiries();
 
+  // ── 10. 관리자 계정 ──────────────────────────────────────────────
+  const adminPassword = await bcrypt.hash('admin1234!', 10);
+  await prisma.customer.upsert({
+    where: { email: 'admin@cinex.com' },
+    create: {
+      email: 'admin@cinex.com',
+      password: adminPassword,
+      name: '관리자',
+      phone: '010-0000-0000',
+      role: 'ADMIN',
+      gradeId: welcomeGrade!.id,
+    },
+    update: { role: 'ADMIN' },
+  });
+  console.log('  ✓ Admin 계정 생성: admin@cinex.com / admin1234!');
+
   // ── 집계 ─────────────────────────────────────────────────────────
   const [cScreenType, cSeatType, cCinema, cScreen, cSeat, cMovie, cScreening, cCustomer, cGenre, cPerson, cMovieGenre, cMoviePerson, cMovieMedia, cPricingPolicy, cCoupon, cUserCoupon, cPartnerDiscount, cMembershipGrade, cMembershipReward, cEvent, cEventPrize, cCinemaEvent, cEventApplication, cCustomerService, cInquiry] = await Promise.all([
     prisma.screenType.count(),
