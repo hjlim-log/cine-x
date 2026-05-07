@@ -1,5 +1,8 @@
 # CINE-X 🎬
 
+[![CI](https://github.com/hjlim-log/cine-x/actions/workflows/ci.yml/badge.svg)](https://github.com/hjlim-log/cine-x/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > NestJS + Next.js로 만든 영화관 예매 풀스택 데모 사이트
 
 ## 📸 Demo
@@ -212,6 +215,25 @@ pnpm dev
 
 - Frontend: http://localhost:3000
 - Backend: http://localhost:4000
+
+## 🤖 CI/CD
+
+GitHub Actions로 자동화된 품질 검증:
+
+| 단계 | 내용 |
+|------|------|
+| **Lint** | ESLint로 코드 스타일 검증 |
+| **Type Check** | TypeScript 컴파일 검증 |
+| **Unit Tests** | PricingService, ReservationsService 등 핵심 로직 |
+| **E2E Tests** | 예매~결제 흐름, 어드민 권한 검증 |
+| **Build** | Next.js 프로덕션 빌드 확인 |
+
+**트리거**: `main` 브랜치 푸시 / Pull Request 생성·업데이트
+
+매 푸시/PR마다 백엔드(NestJS) + 프론트엔드(Next.js) 두 job이 **병렬**로 실행됩니다.  
+워크플로우: [.github/workflows/ci.yml](.github/workflows/ci.yml)
+
+---
 
 ## 🛠 개발 도구
 
