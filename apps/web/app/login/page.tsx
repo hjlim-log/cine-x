@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { login } from '@/lib/api';
 import { Suspense } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 function LoginForm() {
   const router = useRouter();
@@ -21,8 +22,9 @@ function LoginForm() {
     setError('');
     setLoading(true);
     try {
-      const { token } = await login(email, password);
+      const { token, user } = await login(email, password);
       localStorage.setItem('token', token);
+      Sentry.setUser({ id: user.id.toString(), email: user.email });
       router.push(redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : '로그인에 실패했습니다.');

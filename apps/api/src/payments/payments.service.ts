@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MembershipService } from '../membership/membership.service';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { TOSS_CARD_CODES, matchCardIssuer } from './card-codes';
+import * as Sentry from '@sentry/node';
 
 const TOSS_CONFIRM_URL = 'https://api.tosspayments.com/v1/payments/confirm';
 
@@ -19,6 +20,13 @@ export class PaymentsService {
   ) {}
 
   async confirm(customerId: number, dto: ConfirmPaymentDto) {
+    return Sentry.startSpan(
+      { name: 'payment.confirm', op: 'task', attributes: { orderId: dto.orderId, amount: dto.amount } },
+      () => this._confirm(customerId, dto),
+    );
+  }
+
+  private async _confirm(customerId: number, dto: ConfirmPaymentDto) {
     const { paymentKey, orderId, amount } = dto;
 
     const reservation = await this.prisma.reservation.findUnique({

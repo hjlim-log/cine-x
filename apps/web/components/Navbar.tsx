@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { getMyMembership, getMyApplications, getInquiryUnreadCount } from '@/lib/api';
+import * as Sentry from '@sentry/nextjs';
 
 const NAV_LINKS = [
   { label: '영화', href: '/movies' },
@@ -62,6 +63,7 @@ export default function Navbar() {
   function logout() {
     localStorage.removeItem('token');
     sessionStorage.removeItem('membershipGrade');
+    Sentry.setUser(null);
     setLoggedIn(false);
     setGradeName(null);
     setHasUnreadWin(false);
