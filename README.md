@@ -20,6 +20,30 @@
 
 > **관리자 계정으로 로그인해야 접근 가능** — JWT의 `role: ADMIN` 검증, 일반 사용자 접근 시 차단
 
+#### 매출 대시보드 (`/admin`)
+
+실시간 통계 9가지 차트를 한 화면에 제공합니다.
+
+| 구성 요소 | 내용 |
+|---|---|
+| **KPI 카드 4개** | 총 매출 / 총 예매수 / 총 회원수 / 평균 객단가 |
+| **매출 추이** | 일별 매출 Line 차트 (날짜-fns 한국어 툴팁) |
+| **멤버십 등급 분포** | 회원 등급별 인원 Donut 차트 |
+| **영화별 매출 TOP10** | 수평 Bar 차트 + ₩만 단위 레이블 |
+| **영화관별 매출** | 영화관 비중 Pie 차트 |
+| **좌석 점유율** | 영화관별 % Bar (점유율에 따라 녹/황/적 색상) |
+| **쿠폰 사용률** | USED·AVAILABLE·EXPIRED Donut + 중앙 "XX%" 텍스트 |
+| **제휴 할인 현황** | 파트너사별 사용 횟수 수평 Bar |
+| **시간대별 예매 히트맵** | 요일 × 24시간 Custom Grid (붉은 투명도로 밀도 시각화) |
+| **평균 객단가 추이** | 일별 평균 결제금액 Line + 기간 평균 기준선 |
+
+- **기간 토글** (7일 / 30일 / 90일) — 변경 시 9개 API `Promise.all` 병렬 재호출
+- **스켈레톤 로딩** — 데이터 fetch 중 펄스 플레이스홀더
+- **빈 상태** — 데이터 없을 때 점선 "데이터 없음" 박스
+- 기술 스택: **recharts** 2.x + Tailwind CSS dark 테마
+
+---
+
 #### 영화 관리 (`/admin/movies`)
 - 영화 목록 검색/필터 (장르별)
 - 영화 등록 / 수정 / 삭제 (상영 없는 영화만 삭제 가능)
@@ -128,6 +152,7 @@ movie/
 │   │   │   └── migrations/
 │   │   └── src/
 │   │       ├── admin/        # 관리자 API (AdminGuard)
+│   │       │   ├── dashboard/ # 매출 대시보드 9개 엔드포인트
 │   │       │   ├── movies/   # 영화 CRUD
 │   │       │   ├── screenings/ # 상영 단건/일괄/삭제
 │   │       │   └── events/   # 이벤트 추첨
@@ -140,6 +165,7 @@ movie/
 │   └── web/                  # Next.js 프론트엔드
 │       ├── app/
 │       │   ├── admin/        # 관리자 페이지 (role=ADMIN 전용)
+│       │   │   ├── _components/ # 차트 컴포넌트 9개 (recharts)
 │       │   │   ├── movies/   # 영화 CRUD
 │       │   │   ├── screenings/ # 상영 스케줄 (캘린더/단건/일괄)
 │       │   │   └── events/   # 이벤트 추첨
@@ -169,12 +195,20 @@ pnpm install
 # 3. DB 마이그레이션
 pnpm --filter api prisma migrate deploy
 
-# 4. 시드 데이터 삽입
+# 4. 기본 시드 (영화관·영화·상영·등급·쿠폰·이벤트 등)
 pnpm --filter api db:seed
 
-# 5. 개발 서버 실행
+# 5. 데모 매출 시드 (demo01~30 고객 30명 + 90일 예매 ~1,500건)
+#    대시보드 차트를 채우려면 이 단계가 필요합니다.
+pnpm --filter api db:seed-demo
+
+# 6. 개발 서버 실행
 pnpm dev
 ```
+
+> **demo seed 주의사항**  
+> - 멱등 보호: `*@cinex-demo.com` 고객이 이미 있으면 자동 스킵  
+> - 재생성 시 해당 고객과 예매(`orderId LIKE 'demo_%'`)를 먼저 삭제 후 실행
 
 - Frontend: http://localhost:3000
 - Backend: http://localhost:4000
@@ -197,6 +231,15 @@ pnpm dev
 | vip@test.com | password123 | VIP | 75,000원 |
 | vvip@test.com | password123 | VVIP | 250,000원 |
 
+### 데모 매출 시드 계정 (`pnpm --filter api db:seed-demo` 실행 후)
+
+| Email | Password | 비고 |
+|---|---|---|
+| demo01@cinex-demo.com | demo1234! | 30명 중 1번 (등급은 예매 금액에 따라 자동 산정) |
+| … | … | demo02 ~ demo30 동일 패턴 |
+
+> 이 계정들은 90일치 예매 이력을 갖고 있어 대시보드 차트가 완전히 채워집니다.
+
 ## 💳 토스 결제 테스트
 
 테스트 환경이라 실제 결제는 일어나지 않습니다.  
@@ -218,6 +261,7 @@ pnpm dev
 - [x] 이벤트 시스템 (응모/추첨/경품, Fisher-Yates 셔플)
 - [x] 1:1 문의 / 고객센터 (문의 접수·답변·FAQ)
 - [x] 관리자 페이지 (영화 CRUD / 상영 스케줄 관리 / 이벤트 추첨 / 쿠폰 관리 / 문의 답변 / 회원 관리)
+- [x] 매출 대시보드 (9가지 차트 / KPI 카드 / 기간 토글 / 스켈레톤 로딩)
 - [ ] 통신사/포인트 제휴할인
 - [ ] 배포 (Vercel + Railway)
 

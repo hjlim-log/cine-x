@@ -1,0 +1,51 @@
+/* Recharts 다크 테마 보정 — admin/dashboard 전용 */
+
+/* 축 눈금 텍스트 */
+.recharts-cartesian-axis-tick text {
+  fill: #94a3b8;
+  font-size: 12px;
+}
+
+/* 그리드 선 */
+.recharts-cartesian-grid line,
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #1e293b;
+}
+
+/* 툴팁 컨테이너 */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px !important;
+  color: #e2e8f0 !important;
+}
+
+.recharts-tooltip-label {
+  color: #cbd5e1 !important;
+}
+
+.recharts-tooltip-item {
+  color: #e2e8f0 !important;
+}
+
+/* 범례 텍스트 */
+.recharts-legend-item-text {
+  color: #94a3b8 !important;
+}
+
+/* 바 차트 호버 오버레이 */
+.recharts-bar-rectangle:hover {
+  opacity: 0.85;
+}
+
+/* 라인 차트 dot */
+.recharts-dot {
+  stroke-width: 2;
+}
+
+/* 파이 차트 label */
+.recharts-pie-label-text {
+  fill: #94a3b8;
+  font-size: 12px;
+}

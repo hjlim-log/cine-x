@@ -10,6 +10,8 @@ import { AdminInquiriesController } from './inquiries/admin-inquiries.controller
 import { AdminInquiriesService } from './inquiries/admin-inquiries.service';
 import { AdminCustomersController } from './customers/admin-customers.controller';
 import { AdminCustomersService } from './customers/admin-customers.service';
+import { AdminDashboardController } from './dashboard/admin-dashboard.controller';
+import { AdminDashboardService } from './dashboard/admin-dashboard.service';
 import { EventsModule } from '../events/events.module';
 
 @Module({
@@ -21,6 +23,7 @@ import { EventsModule } from '../events/events.module';
     AdminCouponsController,
     AdminInquiriesController,
     AdminCustomersController,
+    AdminDashboardController,
   ],
   providers: [
     AdminMoviesService,
@@ -28,6 +31,7 @@ import { EventsModule } from '../events/events.module';
     AdminCouponsService,
     AdminInquiriesService,
     AdminCustomersService,
+    AdminDashboardService,
   ],
 })
 export class AdminModule {}
