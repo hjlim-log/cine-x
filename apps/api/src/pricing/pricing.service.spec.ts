@@ -1,5 +1,9 @@
 import { Test } from '@nestjs/testing';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
 import { PricingService } from './pricing.service';
@@ -27,7 +31,13 @@ const makeMockScreening = (overrides: Record<string, unknown> = {}) => ({
     cinemaId: 1,
     screenTypeId: 1,
     screenType: { id: 1, name: '일반관', grade: '일반관', description: null },
-    cinema: { id: 1, name: '롯데시네마 강남', address: '서울 강남구', region: '서울', createdAt: new Date() },
+    cinema: {
+      id: 1,
+      name: '롯데시네마 강남',
+      address: '서울 강남구',
+      region: '서울',
+      createdAt: new Date(),
+    },
   },
   ...overrides,
 });
@@ -152,9 +162,11 @@ function setupBase(
   seats: ReturnType<typeof makeSeat>[],
   screeningOverrides: Record<string, unknown> = {},
 ) {
-  prisma.screening.findUnique.mockResolvedValue(makeMockScreening(screeningOverrides) as any);
-  prisma.pricingPolicy.findMany.mockResolvedValue(policies as any);
-  prisma.seat.findMany.mockResolvedValue(seats as any);
+  prisma.screening.findUnique.mockResolvedValue(
+    makeMockScreening(screeningOverrides),
+  );
+  prisma.pricingPolicy.findMany.mockResolvedValue(policies);
+  prisma.seat.findMany.mockResolvedValue(seats);
 }
 
 // ─── 테스트 ───────────────────────────────────────────────────────────────────
@@ -167,10 +179,7 @@ describe('PricingService', () => {
     prisma = mockDeep<PrismaClient>();
 
     const module = await Test.createTestingModule({
-      providers: [
-        PricingService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [PricingService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     service = module.get(PricingService);
@@ -241,7 +250,11 @@ describe('PricingService', () => {
       prisma.screening.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.calculate({ screeningId: 999, seatIds: [1], audienceCounts: { ADULT: 1 } }),
+        service.calculate({
+          screeningId: 999,
+          seatIds: [1],
+          audienceCounts: { ADULT: 1 },
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -249,7 +262,11 @@ describe('PricingService', () => {
       setupBase(prisma, [], [makeSeat(1)]);
 
       await expect(
-        service.calculate({ screeningId: 1, seatIds: [1], audienceCounts: { ADULT: 1 } }),
+        service.calculate({
+          screeningId: 1,
+          seatIds: [1],
+          audienceCounts: { ADULT: 1 },
+        }),
       ).rejects.toThrow('ADULT 요금 정책이 없습니다');
     });
 
@@ -268,12 +285,9 @@ describe('PricingService', () => {
     });
 
     it('토요일 상영 → WEEKEND dayType으로 정책 조회', async () => {
-      setupBase(
-        prisma,
-        [makePolicy('ADULT', 14000)],
-        makeSeats(1),
-        { startTime: WEEKEND_DATE },
-      );
+      setupBase(prisma, [makePolicy('ADULT', 14000)], makeSeats(1), {
+        startTime: WEEKEND_DATE,
+      });
 
       await service.calculate({
         screeningId: 1,
@@ -293,7 +307,11 @@ describe('PricingService', () => {
       setupBase(prisma, [expiredPolicy], makeSeats(1));
 
       await expect(
-        service.calculate({ screeningId: 1, seatIds: [1], audienceCounts: { ADULT: 1 } }),
+        service.calculate({
+          screeningId: 1,
+          seatIds: [1],
+          audienceCounts: { ADULT: 1 },
+        }),
       ).rejects.toThrow('ADULT 요금 정책이 없습니다');
     });
 
@@ -331,8 +349,8 @@ describe('PricingService', () => {
   describe('2단계 - 쿠폰 할인', () => {
     it('AMOUNT_DISCOUNT 3,000원 할인', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(2));
-      prisma.userCoupon.findUnique.mockResolvedValue(makeUserCoupon() as any);
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.userCoupon.findUnique.mockResolvedValue(makeUserCoupon());
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
 
       const result = await service.calculate({
         screeningId: 1,
@@ -351,9 +369,15 @@ describe('PricingService', () => {
     it('PERCENT_DISCOUNT 10% (maxDiscount 없음)', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(2));
       prisma.userCoupon.findUnique.mockResolvedValue(
-        makeUserCoupon({ coupon: { ...makeUserCoupon().coupon, type: 'PERCENT_DISCOUNT', value: 10 } }) as any,
+        makeUserCoupon({
+          coupon: {
+            ...makeUserCoupon().coupon,
+            type: 'PERCENT_DISCOUNT',
+            value: 10,
+          },
+        }),
       );
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
 
       const result = await service.calculate({
         screeningId: 1,
@@ -377,9 +401,9 @@ describe('PricingService', () => {
             value: 10,
             maxDiscount: 1000,
           },
-        }) as any,
+        }),
       );
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
 
       const result = await service.calculate({
         screeningId: 1,
@@ -406,9 +430,9 @@ describe('PricingService', () => {
       prisma.userCoupon.findUnique.mockResolvedValue(
         makeUserCoupon({
           coupon: { ...makeUserCoupon().coupon, type: 'FREE_TICKET', value: 1 },
-        }) as any,
+        }),
       );
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
 
       const result = await service.calculate({
         screeningId: 1,
@@ -423,13 +447,17 @@ describe('PricingService', () => {
 
     it('FREE_TICKET + 커플석 좌석 추가금도 무료에 포함', async () => {
       // ADULT 2명 × 10000, 좌석 추가금 [5000, 0] → FREE_TICKET 1석 = 10000+5000 = 15000
-      setupBase(prisma, [makePolicy('ADULT', 10000)], [makeSeat(1, 5000), makeSeat(2, 0)]);
+      setupBase(
+        prisma,
+        [makePolicy('ADULT', 10000)],
+        [makeSeat(1, 5000), makeSeat(2, 0)],
+      );
       prisma.userCoupon.findUnique.mockResolvedValue(
         makeUserCoupon({
           coupon: { ...makeUserCoupon().coupon, type: 'FREE_TICKET', value: 1 },
-        }) as any,
+        }),
       );
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
 
       const result = await service.calculate({
         screeningId: 1,
@@ -446,10 +474,14 @@ describe('PricingService', () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(2));
       prisma.userCoupon.findUnique.mockResolvedValue(
         makeUserCoupon({
-          coupon: { ...makeUserCoupon().coupon, type: 'FREE_TICKET', value: 99 },
-        }) as any,
+          coupon: {
+            ...makeUserCoupon().coupon,
+            type: 'FREE_TICKET',
+            value: 99,
+          },
+        }),
       );
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
 
       const result = await service.calculate({
         screeningId: 1,
@@ -469,7 +501,7 @@ describe('PricingService', () => {
       prisma.userCoupon.findUnique.mockResolvedValue(
         makeUserCoupon({
           coupon: { ...makeUserCoupon().coupon, minPurchase: 10000 },
-        }) as any,
+        }),
       );
 
       await expect(
@@ -486,7 +518,7 @@ describe('PricingService', () => {
     it('만료된 쿠폰 → BadRequestException', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
       prisma.userCoupon.findUnique.mockResolvedValue(
-        makeUserCoupon({ expiresAt: PAST }) as any,
+        makeUserCoupon({ expiresAt: PAST }),
       );
 
       await expect(
@@ -503,7 +535,7 @@ describe('PricingService', () => {
     it('타인의 쿠폰 → ForbiddenException', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
       prisma.userCoupon.findUnique.mockResolvedValue(
-        makeUserCoupon({ customerId: 999 }) as any, // 다른 고객 소유
+        makeUserCoupon({ customerId: 999 }), // 다른 고객 소유
       );
 
       await expect(
@@ -520,7 +552,7 @@ describe('PricingService', () => {
     it('USED 상태 쿠폰 → BadRequestException', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
       prisma.userCoupon.findUnique.mockResolvedValue(
-        makeUserCoupon({ status: 'USED' }) as any,
+        makeUserCoupon({ status: 'USED' }),
       );
 
       await expect(
@@ -537,9 +569,9 @@ describe('PricingService', () => {
     it('RESERVED 상태 쿠폰 → 정상 처리 (예매 중 선점 가능)', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
       prisma.userCoupon.findUnique.mockResolvedValue(
-        makeUserCoupon({ status: 'RESERVED' }) as any,
+        makeUserCoupon({ status: 'RESERVED' }),
       );
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
 
       const result = await service.calculate({
         screeningId: 1,
@@ -573,8 +605,8 @@ describe('PricingService', () => {
       // subtotal 50000, 쿠폰 3000 → afterCoupon 47000
       // VIP 3% → Math.floor(47000 * 3 / 100) = 1410
       setupBase(prisma, [makePolicy('ADULT', 10000)], makeSeats(5));
-      prisma.userCoupon.findUnique.mockResolvedValue(makeUserCoupon() as any);
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(3) as any);
+      prisma.userCoupon.findUnique.mockResolvedValue(makeUserCoupon());
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(3));
 
       const result = await service.calculate({
         screeningId: 1,
@@ -593,7 +625,9 @@ describe('PricingService', () => {
 
     it('WELCOME 0% → 멤버십 할인 0, appliedMembership undefined', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0, null, '웰컴') as any);
+      prisma.customer.findUnique.mockResolvedValue(
+        makeCustomer(0, null, '웰컴'),
+      );
 
       const result = await service.calculate({
         screeningId: 1,
@@ -609,7 +643,9 @@ describe('PricingService', () => {
     it('VVIP 5% + maxDiscount 5,000원 제한', async () => {
       // subtotal 200000, VVIP 5% = 10000 → maxDiscount 5000으로 제한
       setupBase(prisma, [makePolicy('ADULT', 20000)], makeSeats(10));
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(5, 5000, 'VVIP') as any);
+      prisma.customer.findUnique.mockResolvedValue(
+        makeCustomer(5, 5000, 'VVIP'),
+      );
 
       const result = await service.calculate({
         screeningId: 1,
@@ -655,8 +691,10 @@ describe('PricingService', () => {
   describe('4단계 - 제휴할인', () => {
     it('AMOUNT 2,000원 할인', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(2));
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
-      prisma.partnerDiscount.findUnique.mockResolvedValue(makePartnerDiscount() as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
+      prisma.partnerDiscount.findUnique.mockResolvedValue(
+        makePartnerDiscount(),
+      );
 
       const result = await service.calculate({
         screeningId: 1,
@@ -674,9 +712,13 @@ describe('PricingService', () => {
     it('PERCENT 5% + maxDiscount 3,000원 제한', async () => {
       // afterMembership = 26000, 5% = 1300 → maxDiscount 없으면 1300
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(2));
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
       prisma.partnerDiscount.findUnique.mockResolvedValue(
-        makePartnerDiscount({ discountMethod: 'PERCENT', discountValue: 20, maxDiscount: 3000 }) as any,
+        makePartnerDiscount({
+          discountMethod: 'PERCENT',
+          discountValue: 20,
+          maxDiscount: 3000,
+        }),
       );
 
       const result = await service.calculate({
@@ -693,10 +735,10 @@ describe('PricingService', () => {
 
     it('combinableWithCoupon false + 쿠폰 동시 사용 → BadRequestException', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
-      prisma.userCoupon.findUnique.mockResolvedValue(makeUserCoupon() as any);
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.userCoupon.findUnique.mockResolvedValue(makeUserCoupon());
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
       prisma.partnerDiscount.findUnique.mockResolvedValue(
-        makePartnerDiscount({ combinableWithCoupon: false }) as any,
+        makePartnerDiscount({ combinableWithCoupon: false }),
       );
 
       await expect(
@@ -713,9 +755,9 @@ describe('PricingService', () => {
 
     it('비활성(isActive=false) 제휴할인 → BadRequestException', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
       prisma.partnerDiscount.findUnique.mockResolvedValue(
-        makePartnerDiscount({ isActive: false }) as any,
+        makePartnerDiscount({ isActive: false }),
       );
 
       await expect(
@@ -731,9 +773,9 @@ describe('PricingService', () => {
 
     it('validTo 만료된 제휴할인 → BadRequestException', async () => {
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
       prisma.partnerDiscount.findUnique.mockResolvedValue(
-        makePartnerDiscount({ validTo: PAST }) as any,
+        makePartnerDiscount({ validTo: PAST }),
       );
 
       await expect(
@@ -750,9 +792,9 @@ describe('PricingService', () => {
     it('제휴할인 minPurchase 미달 → BadRequestException (멤버십 차감 후 금액 기준)', async () => {
       // afterMembershipAmount = 13000, pd.minPurchase = 20000 → 에러
       setupBase(prisma, [makePolicy('ADULT', 13000)], makeSeats(1));
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0) as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(0));
       prisma.partnerDiscount.findUnique.mockResolvedValue(
-        makePartnerDiscount({ discountValue: 2000, minPurchase: 20000 }) as any,
+        makePartnerDiscount({ discountValue: 2000, minPurchase: 20000 }),
       );
 
       await expect(
@@ -775,9 +817,11 @@ describe('PricingService', () => {
       // VIP 3% (no max): Math.floor(47000*3/100) = 1,410 → 45,590
       // 제휴 AMOUNT -2,000 → 43,590
       setupBase(prisma, [makePolicy('ADULT', 10000)], makeSeats(5));
-      prisma.userCoupon.findUnique.mockResolvedValue(makeUserCoupon() as any);
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(3) as any);
-      prisma.partnerDiscount.findUnique.mockResolvedValue(makePartnerDiscount() as any);
+      prisma.userCoupon.findUnique.mockResolvedValue(makeUserCoupon());
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(3));
+      prisma.partnerDiscount.findUnique.mockResolvedValue(
+        makePartnerDiscount(),
+      );
 
       const result = await service.calculate({
         screeningId: 1,
@@ -804,10 +848,14 @@ describe('PricingService', () => {
       // afterCoupon = 0 → 멤버십·제휴 모두 0
       setupBase(prisma, [makePolicy('ADULT', 5000)], makeSeats(1));
       prisma.userCoupon.findUnique.mockResolvedValue(
-        makeUserCoupon({ coupon: { ...makeUserCoupon().coupon, value: 10000 } }) as any,
+        makeUserCoupon({
+          coupon: { ...makeUserCoupon().coupon, value: 10000 },
+        }),
       );
-      prisma.customer.findUnique.mockResolvedValue(makeCustomer(3) as any);
-      prisma.partnerDiscount.findUnique.mockResolvedValue(makePartnerDiscount() as any);
+      prisma.customer.findUnique.mockResolvedValue(makeCustomer(3));
+      prisma.partnerDiscount.findUnique.mockResolvedValue(
+        makePartnerDiscount(),
+      );
 
       const result = await service.calculate({
         screeningId: 1,
@@ -818,12 +866,12 @@ describe('PricingService', () => {
         partnerDiscountId: 1,
       });
 
-      expect(result.couponDiscount).toBe(5000);  // subtotal에 캡
+      expect(result.couponDiscount).toBe(5000); // subtotal에 캡
       expect(result.afterCouponAmount).toBe(0);
       expect(result.membershipDiscount).toBe(0);
       expect(result.afterMembershipAmount).toBe(0);
-      expect(result.partnerDiscount).toBe(0);    // afterMembership이 0이므로
-      expect(result.totalAmount).toBe(0);        // 음수 없음
+      expect(result.partnerDiscount).toBe(0); // afterMembership이 0이므로
+      expect(result.totalAmount).toBe(0); // 음수 없음
     });
 
     it('결과 구조 검증 - 모든 필드 존재', async () => {

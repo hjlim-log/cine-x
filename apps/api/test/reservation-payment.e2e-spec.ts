@@ -73,7 +73,9 @@ beforeAll(async () => {
   }).compile();
 
   app = module.createNestApplication();
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+  );
   await app.init();
 
   prisma = app.get(PrismaService);
@@ -111,7 +113,11 @@ beforeAll(async () => {
 
   // 4. 영화관 + 상영관 (타임스탬프로 매 실행마다 유일)
   const cinema = await prisma.cinema.create({
-    data: { name: `E2E_시네마_${Date.now()}`, address: '서울 강남구', region: '서울' },
+    data: {
+      name: `E2E_시네마_${Date.now()}`,
+      address: '서울 강남구',
+      region: '서울',
+    },
   });
   infraIds.cinemaId = cinema.id;
 
@@ -129,7 +135,12 @@ beforeAll(async () => {
   const seats = await Promise.all(
     [1, 2, 3, 4, 5].map((num) =>
       prisma.seat.create({
-        data: { row: 'A', number: num, screenId: screen.id, seatTypeId: seatType.id },
+        data: {
+          row: 'A',
+          number: num,
+          screenId: screen.id,
+          seatTypeId: seatType.id,
+        },
       }),
     ),
   );
@@ -183,8 +194,16 @@ beforeAll(async () => {
   };
 
   // 8. 테스트 사용자 2명 (prisma 직접 생성 → login API로 JWT)
-  tokenA = await createUserAndGetToken('user-a@e2e.local', 'test1234!', 'User A');
-  tokenB = await createUserAndGetToken('user-b@e2e.local', 'test1234!', 'User B');
+  tokenA = await createUserAndGetToken(
+    'user-a@e2e.local',
+    'test1234!',
+    'User A',
+  );
+  tokenB = await createUserAndGetToken(
+    'user-b@e2e.local',
+    'test1234!',
+    'User B',
+  );
 }, 30000);
 
 afterAll(async () => {
@@ -195,21 +214,37 @@ afterAll(async () => {
   });
   const ids = e2eCustomers.map((c) => c.id);
   if (ids.length > 0) {
-    await prisma.couponUsage.deleteMany({ where: { reservation: { customerId: { in: ids } } } });
-    await prisma.partnerDiscountUsage.deleteMany({ where: { reservation: { customerId: { in: ids } } } });
-    await prisma.ticket.deleteMany({ where: { reservation: { customerId: { in: ids } } } });
+    await prisma.couponUsage.deleteMany({
+      where: { reservation: { customerId: { in: ids } } },
+    });
+    await prisma.partnerDiscountUsage.deleteMany({
+      where: { reservation: { customerId: { in: ids } } },
+    });
+    await prisma.ticket.deleteMany({
+      where: { reservation: { customerId: { in: ids } } },
+    });
     await prisma.reservation.deleteMany({ where: { customerId: { in: ids } } });
     await prisma.userCoupon.deleteMany({ where: { customerId: { in: ids } } });
-    await prisma.membershipHistory.deleteMany({ where: { customerId: { in: ids } } });
-    await prisma.customer.deleteMany({ where: { email: { contains: '@e2e.local' } } });
+    await prisma.membershipHistory.deleteMany({
+      where: { customerId: { in: ids } },
+    });
+    await prisma.customer.deleteMany({
+      where: { email: { contains: '@e2e.local' } },
+    });
   }
 
   // 인프라 역순 정리
   if (infraIds.pricingIds.length > 0) {
-    await prisma.pricingPolicy.deleteMany({ where: { id: { in: infraIds.pricingIds } } });
+    await prisma.pricingPolicy.deleteMany({
+      where: { id: { in: infraIds.pricingIds } },
+    });
   }
-  await prisma.ticket.deleteMany({ where: { seat: { screenId: infraIds.screenId } } });
-  await prisma.reservation.deleteMany({ where: { screeningId: infraIds.screeningId } });
+  await prisma.ticket.deleteMany({
+    where: { seat: { screenId: infraIds.screenId } },
+  });
+  await prisma.reservation.deleteMany({
+    where: { screeningId: infraIds.screeningId },
+  });
   await prisma.screening.deleteMany({ where: { id: infraIds.screeningId } });
   await prisma.seat.deleteMany({ where: { screenId: infraIds.screenId } });
   await prisma.movie.deleteMany({ where: { id: infraIds.movieId } });

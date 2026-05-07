@@ -44,7 +44,14 @@ export class MoviesService {
     });
     if (!movie) throw new NotFoundException('영화를 찾을 수 없습니다.');
 
-    const { genres, people, media, screenings: rawScreenings, genre: _genre, ...movieFields } = movie;
+    const {
+      genres,
+      people,
+      media,
+      screenings: rawScreenings,
+      genre: _genre,
+      ...movieFields
+    } = movie;
 
     const screenings = rawScreenings.map((s) => {
       const { screenType: screenTypeObj, ...screenFields } = s.screen;
@@ -57,7 +64,9 @@ export class MoviesService {
       .filter((p) => p.role === '출연')
       .map(({ person, order }) => ({ ...person, order }));
     const trailer = media.find((m) => m.type === 'trailer') ?? null;
-    const stills = media.filter((m) => m.type === 'still').map(({ url }) => ({ url }));
+    const stills = media
+      .filter((m) => m.type === 'still')
+      .map(({ url }) => ({ url }));
 
     return {
       ...movieFields,

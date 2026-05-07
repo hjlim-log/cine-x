@@ -43,7 +43,9 @@ export class ReservationsService {
             },
           });
           if (conflicts.length > 0) {
-            throw new ConflictException('이미 예매된 좌석이 포함되어 있습니다.');
+            throw new ConflictException(
+              '이미 예매된 좌석이 포함되어 있습니다.',
+            );
           }
 
           const breakdown = await this.pricingService.calculate({
@@ -81,7 +83,9 @@ export class ReservationsService {
 
           // 쿠폰 RESERVED 처리 (tx 안에서 AVAILABLE 재확인으로 동시 사용 방지)
           if (dto.userCouponId) {
-            const uc = await tx.userCoupon.findUnique({ where: { id: dto.userCouponId } });
+            const uc = await tx.userCoupon.findUnique({
+              where: { id: dto.userCouponId },
+            });
             if (!uc || uc.status !== 'AVAILABLE') {
               throw new ConflictException('이미 사용 중인 쿠폰입니다.');
             }
@@ -114,7 +118,10 @@ export class ReservationsService {
       );
     } catch (e: unknown) {
       // 직렬화 충돌(P2034): 동시 예매가 Serializable SSI에서 감지된 경우
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034') {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2034'
+      ) {
         throw new ConflictException('이미 예매된 좌석이 포함되어 있습니다.');
       }
       throw e;
@@ -154,7 +161,8 @@ export class ReservationsService {
         },
       },
     });
-    if (!reservation) throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
+    if (!reservation)
+      throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
     if (reservation.customerId !== customerId) {
       throw new ForbiddenException('조회 권한이 없습니다.');
     }
@@ -217,7 +225,9 @@ export class ReservationsService {
           where: { id: r.couponUsage.userCouponId },
           data: { status: 'AVAILABLE' },
         });
-        await this.prisma.couponUsage.delete({ where: { id: r.couponUsage.id } });
+        await this.prisma.couponUsage.delete({
+          where: { id: r.couponUsage.id },
+        });
       }
     }
 
@@ -227,13 +237,19 @@ export class ReservationsService {
     });
   }
 
-  async applyPartnerDiscount(id: number, customerId: number, partnerDiscountId?: number) {
+  async applyPartnerDiscount(
+    id: number,
+    customerId: number,
+    partnerDiscountId?: number,
+  ) {
     const reservation = await this.prisma.reservation.findUnique({
       where: { id },
       include: { couponUsage: true, tickets: true },
     });
-    if (!reservation) throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
-    if (reservation.customerId !== customerId) throw new ForbiddenException('권한이 없습니다.');
+    if (!reservation)
+      throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
+    if (reservation.customerId !== customerId)
+      throw new ForbiddenException('권한이 없습니다.');
     if (reservation.status !== 'PENDING') {
       throw new BadRequestException('결제 대기 상태의 예매만 변경 가능합니다.');
     }
@@ -241,18 +257,28 @@ export class ReservationsService {
     const breakdown = await this.pricingService.calculate({
       screeningId: reservation.screeningId,
       seatIds: reservation.tickets.map((t) => t.seatId),
-      audienceCounts: (reservation.audienceCounts as Record<string, number>) ?? {},
+      audienceCounts:
+        (reservation.audienceCounts as Record<string, number>) ?? {},
       userCouponId: reservation.couponUsage?.userCouponId ?? undefined,
       customerId,
       partnerDiscountId,
     });
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.reservation.update({ where: { id }, data: { totalAmount: breakdown.totalAmount } });
-      await tx.partnerDiscountUsage.deleteMany({ where: { reservationId: id } });
+      await tx.reservation.update({
+        where: { id },
+        data: { totalAmount: breakdown.totalAmount },
+      });
+      await tx.partnerDiscountUsage.deleteMany({
+        where: { reservationId: id },
+      });
       if (partnerDiscountId && breakdown.partnerDiscount > 0) {
         await tx.partnerDiscountUsage.create({
-          data: { partnerDiscountId, reservationId: id, discountAmount: breakdown.partnerDiscount },
+          data: {
+            partnerDiscountId,
+            reservationId: id,
+            discountAmount: breakdown.partnerDiscount,
+          },
         });
       }
     });
@@ -265,12 +291,15 @@ export class ReservationsService {
       where: { id },
       include: { couponUsage: true },
     });
-    if (!reservation) throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
+    if (!reservation)
+      throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
     if (reservation.customerId !== customerId) {
       throw new ForbiddenException('취소 권한이 없습니다.');
     }
     if (!['PENDING', 'PAID'].includes(reservation.status)) {
-      throw new BadRequestException(`${reservation.status} 상태는 취소할 수 없습니다.`);
+      throw new BadRequestException(
+        `${reservation.status} 상태는 취소할 수 없습니다.`,
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -279,10 +308,16 @@ export class ReservationsService {
           where: { id: reservation.couponUsage.userCouponId },
           data: { status: 'AVAILABLE' },
         });
-        await tx.couponUsage.delete({ where: { id: reservation.couponUsage.id } });
+        await tx.couponUsage.delete({
+          where: { id: reservation.couponUsage.id },
+        });
       }
       if (reservation.status === 'PAID') {
-        await this.membershipService.subtractFromTotalAmount(tx, reservation.customerId, reservation.totalAmount);
+        await this.membershipService.subtractFromTotalAmount(
+          tx,
+          reservation.customerId,
+          reservation.totalAmount,
+        );
       }
       return tx.reservation.update({
         where: { id },

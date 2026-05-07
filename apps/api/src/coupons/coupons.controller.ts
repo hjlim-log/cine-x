@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, UseGuards } from '@nestjs/common';
 import { CouponsService } from './coupons.service';
 import { RedeemCouponDto } from './dto/redeem-coupon.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -17,10 +10,7 @@ export class CouponsController {
   constructor(private readonly couponsService: CouponsService) {}
 
   @Post('redeem')
-  redeem(
-    @GetUser() user: { id: number },
-    @Body() dto: RedeemCouponDto,
-  ) {
+  redeem(@GetUser() user: { id: number }, @Body() dto: RedeemCouponDto) {
     return this.couponsService.redeemByCode(user.id, dto.code);
   }
 
@@ -37,6 +27,9 @@ export class CouponsController {
     @GetUser() user: { id: number },
     @Query('amount') amount: string,
   ) {
-    return this.couponsService.getApplicableCoupons(user.id, Number(amount) || 0);
+    return this.couponsService.getApplicableCoupons(
+      user.id,
+      Number(amount) || 0,
+    );
   }
 }

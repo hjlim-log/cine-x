@@ -26,7 +26,12 @@ export class AuthService {
 
     const hashed = await bcrypt.hash(dto.password, 10);
     const customer = await this.prisma.customer.create({
-      data: { email: dto.email, password: hashed, name: dto.name, phone: dto.phone },
+      data: {
+        email: dto.email,
+        password: hashed,
+        name: dto.name,
+        phone: dto.phone,
+      },
     });
 
     await this.couponsService.issueWelcomeCoupons(customer.id);
@@ -39,14 +44,22 @@ export class AuthService {
     const customer = await this.prisma.customer.findUnique({
       where: { email: dto.email },
     });
-    if (!customer) throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
+    if (!customer)
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 올바르지 않습니다.',
+      );
 
     if (!customer.isActive) {
-      throw new UnauthorizedException('비활성화된 계정입니다. 고객센터로 문의해주세요.');
+      throw new UnauthorizedException(
+        '비활성화된 계정입니다. 고객센터로 문의해주세요.',
+      );
     }
 
     const valid = await bcrypt.compare(dto.password, customer.password);
-    if (!valid) throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다.');
+    if (!valid)
+      throw new UnauthorizedException(
+        '이메일 또는 비밀번호가 올바르지 않습니다.',
+      );
 
     const token = this.sign(customer.id, customer.email, customer.role);
     const { password: _pw, ...user } = customer;

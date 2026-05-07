@@ -41,7 +41,8 @@ export class AdminDashboardService {
       totalReservations: reservationCount,
       totalCustomers,
       activeUsers,
-      avgOrderValue: reservationCount > 0 ? Math.floor(totalRevenue / reservationCount) : 0,
+      avgOrderValue:
+        reservationCount > 0 ? Math.floor(totalRevenue / reservationCount) : 0,
     };
   }
 
@@ -112,7 +113,10 @@ export class AdminDashboardService {
       },
     });
 
-    const map = new Map<number, { movie: any; revenue: number; count: number }>();
+    const map = new Map<
+      number,
+      { movie: any; revenue: number; count: number }
+    >();
     for (const r of reservations) {
       const movie = r.screening.movie;
       const entry = map.get(movie.id) ?? { movie, revenue: 0, count: 0 };
@@ -124,7 +128,11 @@ export class AdminDashboardService {
     return Array.from(map.values())
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, top)
-      .map(({ movie, revenue, count }) => ({ movie, revenue, reservationCount: count }));
+      .map(({ movie, revenue, count }) => ({
+        movie,
+        revenue,
+        reservationCount: count,
+      }));
   }
 
   async getCinemasRevenue(period: Period) {
@@ -146,7 +154,10 @@ export class AdminDashboardService {
       },
     });
 
-    const map = new Map<number, { cinema: any; revenue: number; count: number }>();
+    const map = new Map<
+      number,
+      { cinema: any; revenue: number; count: number }
+    >();
     for (const r of reservations) {
       const cinema = r.screening.screen.cinema;
       const entry = map.get(cinema.id) ?? { cinema, revenue: 0, count: 0 };
@@ -157,20 +168,26 @@ export class AdminDashboardService {
 
     return Array.from(map.values())
       .sort((a, b) => b.revenue - a.revenue)
-      .map(({ cinema, revenue, count }) => ({ cinema, revenue, reservationCount: count }));
+      .map(({ cinema, revenue, count }) => ({
+        cinema,
+        revenue,
+        reservationCount: count,
+      }));
   }
 
   async getSeatOccupancy(period: Period) {
     const { start, end } = this.getPeriodRange(period);
 
     // audienceCounts JSON 합산 + 영화관별 점유율 산출
-    const rows = await this.prisma.$queryRaw<{
-      cinema_id: number;
-      cinema_name: string;
-      screening_count: bigint;
-      avg_capacity: number;
-      occupied_seats: bigint;
-    }[]>`
+    const rows = await this.prisma.$queryRaw<
+      {
+        cinema_id: number;
+        cinema_name: string;
+        screening_count: bigint;
+        avg_capacity: number;
+        occupied_seats: bigint;
+      }[]
+    >`
       SELECT
         c.id::int                                                    AS cinema_id,
         c.name                                                       AS cinema_name,
@@ -281,7 +298,11 @@ export class AdminDashboardService {
     >();
     for (const u of usages) {
       const pd = u.partnerDiscount;
-      const entry = map.get(pd.id) ?? { partner: pd, count: 0, totalDiscount: 0 };
+      const entry = map.get(pd.id) ?? {
+        partner: pd,
+        count: 0,
+        totalDiscount: 0,
+      };
       entry.count += 1;
       entry.totalDiscount += u.discountAmount;
       map.set(pd.id, entry);
@@ -289,6 +310,10 @@ export class AdminDashboardService {
 
     return Array.from(map.values())
       .sort((a, b) => b.count - a.count)
-      .map(({ partner, count, totalDiscount }) => ({ partner, count, totalDiscount }));
+      .map(({ partner, count, totalDiscount }) => ({
+        partner,
+        count,
+        totalDiscount,
+      }));
   }
 }

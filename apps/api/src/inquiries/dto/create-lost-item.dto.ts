@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, IsInt, IsDateString } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsInt,
+  IsDateString,
+} from 'class-validator';
 
 export class CreateLostItemDto {
   @IsString()

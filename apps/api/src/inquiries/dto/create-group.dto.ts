@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsOptional, IsString, IsInt, IsDateString, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsInt,
+  IsDateString,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateGroupDto {

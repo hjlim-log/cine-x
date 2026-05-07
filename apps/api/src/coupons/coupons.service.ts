@@ -20,7 +20,9 @@ export class CouponsService {
         data: {
           customerId,
           couponId: coupon.id,
-          expiresAt: new Date(Date.now() + coupon.validDays * 24 * 60 * 60 * 1000),
+          expiresAt: new Date(
+            Date.now() + coupon.validDays * 24 * 60 * 60 * 1000,
+          ),
         },
       });
       await this.prisma.coupon.update({
@@ -33,7 +35,8 @@ export class CouponsService {
   async redeemByCode(customerId: number, code: string) {
     const coupon = await this.prisma.coupon.findUnique({ where: { code } });
     if (!coupon) throw new NotFoundException('존재하지 않는 쿠폰 코드입니다.');
-    if (!coupon.isActive) throw new BadRequestException('비활성화된 쿠폰입니다.');
+    if (!coupon.isActive)
+      throw new BadRequestException('비활성화된 쿠폰입니다.');
     if (coupon.issuePolicy !== 'CODE') {
       throw new BadRequestException('코드로 발급할 수 없는 쿠폰입니다.');
     }
@@ -47,7 +50,9 @@ export class CouponsService {
       data: {
         customerId,
         couponId: coupon.id,
-        expiresAt: new Date(Date.now() + coupon.validDays * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(
+          Date.now() + coupon.validDays * 24 * 60 * 60 * 1000,
+        ),
       },
       include: { coupon: true },
     });
@@ -66,7 +71,11 @@ export class CouponsService {
   ) {
     if (status === 'AVAILABLE') {
       await this.prisma.userCoupon.updateMany({
-        where: { customerId, status: 'AVAILABLE', expiresAt: { lt: new Date() } },
+        where: {
+          customerId,
+          status: 'AVAILABLE',
+          expiresAt: { lt: new Date() },
+        },
         data: { status: 'EXPIRED' },
       });
     }

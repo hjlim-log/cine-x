@@ -21,10 +21,7 @@ export class CustomerServiceService {
       where: {
         type: 'NOTICE',
         isActive: true,
-        OR: [
-          { noticeScope: 'GLOBAL' },
-          { noticeScope: 'CINEMA', cinemaId },
-        ],
+        OR: [{ noticeScope: 'GLOBAL' }, { noticeScope: 'CINEMA', cinemaId }],
       },
       include: { cinema: { select: { id: true, name: true } } },
       orderBy: [

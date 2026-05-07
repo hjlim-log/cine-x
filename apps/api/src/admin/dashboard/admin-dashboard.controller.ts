@@ -31,10 +31,7 @@ export class AdminDashboardController {
   }
 
   @Get('movies-revenue')
-  moviesRevenue(
-    @Query('period') period?: string,
-    @Query('top') top?: string,
-  ) {
+  moviesRevenue(@Query('period') period?: string, @Query('top') top?: string) {
     const topN = top ? Math.max(1, Math.min(50, parseInt(top, 10) || 10)) : 10;
     return this.service.getMoviesRevenue(parsePeriod(period), topN);
   }

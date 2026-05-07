@@ -6,10 +6,54 @@ import { PrismaService } from '../prisma/prisma.service';
 
 // ─── 등급 픽스처 (seed.ts 기준) ───────────────────────────────────────────────
 const G = {
-  WELCOME: { id: 1, name: 'WELCOME', displayName: '웰컴', description: null, minAmount: 0,      maxAmount: 49999,  discountPercent: 0, maxDiscount: null, bgColor: '#6b7280', iconUrl: null },
-  VIP:     { id: 2, name: 'VIP',     displayName: 'VIP',  description: null, minAmount: 50000,  maxAmount: 199999, discountPercent: 3, maxDiscount: 3000, bgColor: '#dc2626', iconUrl: null },
-  VVIP:    { id: 3, name: 'VVIP',    displayName: 'VVIP', description: null, minAmount: 200000, maxAmount: 499999, discountPercent: 5, maxDiscount: 5000, bgColor: '#7c3aed', iconUrl: null },
-  LVIP:    { id: 4, name: 'LVIP',    displayName: 'LVIP', description: null, minAmount: 500000, maxAmount: null,   discountPercent: 7, maxDiscount: 8000, bgColor: '#fbbf24', iconUrl: null },
+  WELCOME: {
+    id: 1,
+    name: 'WELCOME',
+    displayName: '웰컴',
+    description: null,
+    minAmount: 0,
+    maxAmount: 49999,
+    discountPercent: 0,
+    maxDiscount: null,
+    bgColor: '#6b7280',
+    iconUrl: null,
+  },
+  VIP: {
+    id: 2,
+    name: 'VIP',
+    displayName: 'VIP',
+    description: null,
+    minAmount: 50000,
+    maxAmount: 199999,
+    discountPercent: 3,
+    maxDiscount: 3000,
+    bgColor: '#dc2626',
+    iconUrl: null,
+  },
+  VVIP: {
+    id: 3,
+    name: 'VVIP',
+    displayName: 'VVIP',
+    description: null,
+    minAmount: 200000,
+    maxAmount: 499999,
+    discountPercent: 5,
+    maxDiscount: 5000,
+    bgColor: '#7c3aed',
+    iconUrl: null,
+  },
+  LVIP: {
+    id: 4,
+    name: 'LVIP',
+    displayName: 'LVIP',
+    description: null,
+    minAmount: 500000,
+    maxAmount: null,
+    discountPercent: 7,
+    maxDiscount: 8000,
+    bgColor: '#fbbf24',
+    iconUrl: null,
+  },
 };
 
 type GradeKey = keyof typeof G;
@@ -17,10 +61,18 @@ type GradeKey = keyof typeof G;
 function makeCustomer(totalAmount: number, gradeKey: GradeKey) {
   const grade = G[gradeKey];
   return {
-    id: 1, email: 'u@test.local', password: 'h', name: 'T',
-    phone: null, role: 'USER', totalAmount,
-    gradeId: grade.id, isActive: true,
-    deactivatedAt: null, deactivatedBy: null, deactivateReason: null,
+    id: 1,
+    email: 'u@test.local',
+    password: 'h',
+    name: 'T',
+    phone: null,
+    role: 'USER',
+    totalAmount,
+    gradeId: grade.id,
+    isActive: true,
+    deactivatedAt: null,
+    deactivatedBy: null,
+    deactivateReason: null,
     createdAt: new Date(),
     membershipGrade: grade,
   };
@@ -47,9 +99,15 @@ describe('MembershipService', () => {
   });
 
   // ─── 공통 mock 헬퍼 ─────────────────────────────────────────────────────────
-  function setupBasicTx(currentGradeKey: GradeKey, currentTotal: number, nextGrade: typeof G[GradeKey]) {
-    tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(currentTotal, currentGradeKey) as any);
-    tx.membershipGrade.findFirstOrThrow.mockResolvedValue(nextGrade as any);
+  function setupBasicTx(
+    currentGradeKey: GradeKey,
+    currentTotal: number,
+    nextGrade: (typeof G)[GradeKey],
+  ) {
+    tx.customer.findUniqueOrThrow.mockResolvedValue(
+      makeCustomer(currentTotal, currentGradeKey),
+    );
+    tx.membershipGrade.findFirstOrThrow.mockResolvedValue(nextGrade);
     tx.customer.update.mockResolvedValue({} as any);
   }
 
@@ -61,7 +119,9 @@ describe('MembershipService', () => {
       const result = await service.addToTotalAmount(tx, 1, 0);
 
       expect(tx.membershipGrade.findFirstOrThrow).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ minAmount: { lte: 0 } }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ minAmount: { lte: 0 } }),
+        }),
       );
       expect(result.newGrade).toBe('WELCOME');
       expect(result.totalAmount).toBe(0);
@@ -73,49 +133,63 @@ describe('MembershipService', () => {
       await service.addToTotalAmount(tx, 1, 49999);
 
       expect(tx.membershipGrade.findFirstOrThrow).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ minAmount: { lte: 49999 } }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ minAmount: { lte: 49999 } }),
+        }),
       );
     });
 
     it('누적 50,000원 → VIP 경계 정확히: amount=50000으로 쿼리', async () => {
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(0, 'WELCOME') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VIP as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(0, 'WELCOME'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VIP);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
-      tx.membershipReward.findMany.mockResolvedValue([] as any);
+      tx.membershipReward.findMany.mockResolvedValue([]);
 
       await service.addToTotalAmount(tx, 1, 50000);
 
       expect(tx.membershipGrade.findFirstOrThrow).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ minAmount: { lte: 50000 } }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ minAmount: { lte: 50000 } }),
+        }),
       );
     });
 
     it('누적 200,000원 → VVIP 경계: amount=200000으로 쿼리', async () => {
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(0, 'WELCOME') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VVIP as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(0, 'WELCOME'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VVIP);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
-      tx.membershipReward.findMany.mockResolvedValue([] as any);
+      tx.membershipReward.findMany.mockResolvedValue([]);
 
       await service.addToTotalAmount(tx, 1, 200000);
 
       expect(tx.membershipGrade.findFirstOrThrow).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ minAmount: { lte: 200000 } }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ minAmount: { lte: 200000 } }),
+        }),
       );
     });
 
     it('누적 1,000,000원 → LVIP(최상위): amount=1000000으로 쿼리', async () => {
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(0, 'WELCOME') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.LVIP as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(0, 'WELCOME'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.LVIP);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
-      tx.membershipReward.findMany.mockResolvedValue([] as any);
+      tx.membershipReward.findMany.mockResolvedValue([]);
 
       await service.addToTotalAmount(tx, 1, 1000000);
 
       expect(tx.membershipGrade.findFirstOrThrow).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ minAmount: { lte: 1000000 } }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ minAmount: { lte: 1000000 } }),
+        }),
       );
     });
   });
@@ -123,11 +197,13 @@ describe('MembershipService', () => {
   // ═══════════════════════════════════════════════════════════════════════════
   describe('addToTotalAmount', () => {
     it('WELCOME → VIP 승급: upgraded=true, 등급 변경 반환', async () => {
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(0, 'WELCOME') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VIP as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(0, 'WELCOME'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VIP);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
-      tx.membershipReward.findMany.mockResolvedValue([] as any);
+      tx.membershipReward.findMany.mockResolvedValue([]);
 
       const result = await service.addToTotalAmount(tx, 1, 50000);
 
@@ -151,11 +227,13 @@ describe('MembershipService', () => {
     });
 
     it('승급 시 MembershipHistory changeType=UPGRADE로 기록', async () => {
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(0, 'WELCOME') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VIP as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(0, 'WELCOME'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VIP);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
-      tx.membershipReward.findMany.mockResolvedValue([] as any);
+      tx.membershipReward.findMany.mockResolvedValue([]);
 
       await service.addToTotalAmount(tx, 1, 50000);
 
@@ -173,14 +251,24 @@ describe('MembershipService', () => {
     });
 
     it('승급 시 보상 쿠폰 자동 발급 (quantity=1 → userCoupon 1개 생성)', async () => {
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(0, 'WELCOME') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VIP as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(0, 'WELCOME'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VIP);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
       tx.membershipReward.findMany.mockResolvedValue([
         {
-          id: 1, gradeId: G.VIP.id, couponId: 10, quantity: 1,
-          coupon: { id: 10, code: 'WELCOME2026', name: '환영쿠폰', validDays: 90 },
+          id: 1,
+          gradeId: G.VIP.id,
+          couponId: 10,
+          quantity: 1,
+          coupon: {
+            id: 10,
+            code: 'WELCOME2026',
+            name: '환영쿠폰',
+            validDays: 90,
+          },
         },
       ] as any);
       tx.userCoupon.create.mockResolvedValue({} as any);
@@ -203,14 +291,24 @@ describe('MembershipService', () => {
     });
 
     it('quantity=2인 보상 → userCoupon 2개 생성', async () => {
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(0, 'WELCOME') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VVIP as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(0, 'WELCOME'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.VVIP);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
       tx.membershipReward.findMany.mockResolvedValue([
         {
-          id: 1, gradeId: G.VVIP.id, couponId: 20, quantity: 2,
-          coupon: { id: 20, code: 'VVIP-BONUS', name: 'VVIP보너스', validDays: 60 },
+          id: 1,
+          gradeId: G.VVIP.id,
+          couponId: 20,
+          quantity: 2,
+          coupon: {
+            id: 20,
+            code: 'VVIP-BONUS',
+            name: 'VVIP보너스',
+            validDays: 60,
+          },
         },
       ] as any);
       tx.userCoupon.create.mockResolvedValue({} as any);
@@ -229,7 +327,9 @@ describe('MembershipService', () => {
 
       // Math.max(0, 0 - 99999) = 0
       expect(tx.membershipGrade.findFirstOrThrow).toHaveBeenCalledWith(
-        expect.objectContaining({ where: expect.objectContaining({ minAmount: { lte: 0 } }) }),
+        expect.objectContaining({
+          where: expect.objectContaining({ minAmount: { lte: 0 } }),
+        }),
       );
       expect(result.totalAmount).toBe(0);
     });
@@ -239,8 +339,10 @@ describe('MembershipService', () => {
   describe('subtractFromTotalAmount', () => {
     it('VIP(60,000) → 50,000원 차감 → WELCOME 강등, changeType=DOWNGRADE', async () => {
       // 60000 - 50000 = 10000 → WELCOME 범위
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(60000, 'VIP') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.WELCOME as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(60000, 'VIP'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.WELCOME);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
 
@@ -263,8 +365,10 @@ describe('MembershipService', () => {
     });
 
     it('강등 시 보상 쿠폰 발급 없음 (DOWN이면 issueGradeRewards 미호출)', async () => {
-      tx.customer.findUniqueOrThrow.mockResolvedValue(makeCustomer(60000, 'VIP') as any);
-      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.WELCOME as any);
+      tx.customer.findUniqueOrThrow.mockResolvedValue(
+        makeCustomer(60000, 'VIP'),
+      );
+      tx.membershipGrade.findFirstOrThrow.mockResolvedValue(G.WELCOME);
       tx.customer.update.mockResolvedValue({} as any);
       tx.membershipHistory.create.mockResolvedValue({} as any);
 

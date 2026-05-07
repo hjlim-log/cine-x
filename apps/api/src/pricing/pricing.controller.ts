@@ -23,7 +23,9 @@ class AudienceCountsDto {
 class CalculatePriceDto {
   @IsInt() screeningId: number;
   @IsArray() @ArrayMinSize(1) @IsInt({ each: true }) seatIds: number[];
-  @ValidateNested() @Type(() => AudienceCountsDto) audienceCounts: AudienceCountsDto;
+  @ValidateNested()
+  @Type(() => AudienceCountsDto)
+  audienceCounts: AudienceCountsDto;
   @IsOptional() @IsInt() userCouponId?: number;
   @IsOptional() @IsInt() partnerDiscountId?: number;
 }
@@ -34,10 +36,7 @@ export class PricingController {
   constructor(private readonly pricingService: PricingService) {}
 
   @Post('calculate')
-  calculate(
-    @GetUser() user: { id: number },
-    @Body() dto: CalculatePriceDto,
-  ) {
+  calculate(@GetUser() user: { id: number }, @Body() dto: CalculatePriceDto) {
     return this.pricingService.calculate({ ...dto, customerId: user.id });
   }
 }

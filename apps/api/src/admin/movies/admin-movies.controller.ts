@@ -39,10 +39,7 @@ export class AdminMoviesController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateMovieDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateMovieDto) {
     return this.service.update(id, dto);
   }
 

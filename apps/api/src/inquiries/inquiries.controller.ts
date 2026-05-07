@@ -49,10 +49,7 @@ export class InquiriesController {
 
   // POST /inquiries/group
   @Post('group')
-  createGroup(
-    @GetUser() user: { id: number },
-    @Body() dto: CreateGroupDto,
-  ) {
+  createGroup(@GetUser() user: { id: number }, @Body() dto: CreateGroupDto) {
     return this.inquiriesService.createGroup(user.id, dto);
   }
 

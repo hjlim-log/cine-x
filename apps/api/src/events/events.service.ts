@@ -47,7 +47,9 @@ export class EventsService {
   }
 
   async apply(customerId: number, eventId: number) {
-    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
     if (!event) throw new NotFoundException('이벤트를 찾을 수 없습니다.');
     if (event.status !== 'ONGOING') {
       throw new BadRequestException('현재 응모 가능한 이벤트가 아닙니다.');
@@ -75,7 +77,8 @@ export class EventsService {
         include: { event: { select: { id: true, title: true } } },
       });
     } catch (error: any) {
-      if (error.code === 'P2002') throw new ConflictException('이미 응모한 이벤트입니다.');
+      if (error.code === 'P2002')
+        throw new ConflictException('이미 응모한 이벤트입니다.');
       throw error;
     }
   }
@@ -84,7 +87,9 @@ export class EventsService {
     return this.prisma.eventApplication.findMany({
       where: { customerId },
       include: {
-        event: { select: { id: true, title: true, imageUrl: true, status: true } },
+        event: {
+          select: { id: true, title: true, imageUrl: true, status: true },
+        },
         prize: true,
         userCoupon: { include: { coupon: true } },
       },
@@ -111,10 +116,13 @@ export class EventsService {
       include: { prizes: true, applications: true },
     });
     if (!event) throw new NotFoundException('이벤트가 없습니다.');
-    if (event.status === 'DRAWN') throw new BadRequestException('이미 추첨이 완료된 이벤트입니다.');
+    if (event.status === 'DRAWN')
+      throw new BadRequestException('이미 추첨이 완료된 이벤트입니다.');
 
     return this.prisma.$transaction(async (tx) => {
-      const applications = event.applications.filter((a) => a.status === 'PENDING');
+      const applications = event.applications.filter(
+        (a) => a.status === 'PENDING',
+      );
 
       // Fisher-Yates 셔플 (Math.sort 편향 방지)
       const shuffled = [...applications];
@@ -124,7 +132,11 @@ export class EventsService {
       }
 
       let cursor = 0;
-      const winners: { applicationId: number; customerId: number; prizeName: string }[] = [];
+      const winners: {
+        applicationId: number;
+        customerId: number;
+        prizeName: string;
+      }[] = [];
 
       for (const prize of event.prizes) {
         if (cursor >= shuffled.length) break;
@@ -136,13 +148,17 @@ export class EventsService {
           let userCouponId: number | null = null;
 
           if (prize.type === 'COUPON' && prize.couponId) {
-            const coupon = await tx.coupon.findUnique({ where: { id: prize.couponId } });
+            const coupon = await tx.coupon.findUnique({
+              where: { id: prize.couponId },
+            });
             if (coupon) {
               const userCoupon = await tx.userCoupon.create({
                 data: {
                   customerId: application.customerId,
                   couponId: prize.couponId,
-                  expiresAt: new Date(Date.now() + coupon.validDays * 24 * 60 * 60 * 1000),
+                  expiresAt: new Date(
+                    Date.now() + coupon.validDays * 24 * 60 * 60 * 1000,
+                  ),
                 },
               });
               userCouponId = userCoupon.id;

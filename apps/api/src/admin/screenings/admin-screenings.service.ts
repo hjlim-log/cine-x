@@ -30,10 +30,14 @@ export class AdminScreeningsService {
   }
 
   async create(dto: CreateScreeningDto) {
-    const movie = await this.prisma.movie.findUnique({ where: { id: dto.movieId } });
+    const movie = await this.prisma.movie.findUnique({
+      where: { id: dto.movieId },
+    });
     if (!movie) throw new NotFoundException('영화가 없습니다.');
 
-    const screen = await this.prisma.screen.findUnique({ where: { id: dto.screenId } });
+    const screen = await this.prisma.screen.findUnique({
+      where: { id: dto.screenId },
+    });
     if (!screen) throw new NotFoundException('상영관이 없습니다.');
 
     const startTime = new Date(dto.startTime);
@@ -44,7 +48,9 @@ export class AdminScreeningsService {
     }
 
     if (await this.checkConflict(dto.screenId, startTime, endTime)) {
-      throw new ConflictException('해당 상영관에 시간이 겹치는 상영이 있습니다.');
+      throw new ConflictException(
+        '해당 상영관에 시간이 겹치는 상영이 있습니다.',
+      );
     }
 
     return this.prisma.screening.create({
@@ -63,7 +69,9 @@ export class AdminScreeningsService {
   }
 
   async bulkCreate(dto: BulkCreateScreeningDto) {
-    const movie = await this.prisma.movie.findUnique({ where: { id: dto.movieId } });
+    const movie = await this.prisma.movie.findUnique({
+      where: { id: dto.movieId },
+    });
     if (!movie) throw new NotFoundException('영화가 없습니다.');
 
     const startDate = new Date(dto.startDate);
@@ -93,7 +101,9 @@ export class AdminScreeningsService {
 
           if (startTime < new Date()) continue;
 
-          const endTime = new Date(startTime.getTime() + movie.runtime * 60 * 1000);
+          const endTime = new Date(
+            startTime.getTime() + movie.runtime * 60 * 1000,
+          );
           candidates.push({ startTime, endTime });
         }
       }
@@ -102,14 +112,22 @@ export class AdminScreeningsService {
     }
 
     if (candidates.length === 0) {
-      throw new BadRequestException('생성할 상영이 없습니다. 날짜와 시간을 확인해주세요.');
+      throw new BadRequestException(
+        '생성할 상영이 없습니다. 날짜와 시간을 확인해주세요.',
+      );
     }
 
     const created: any[] = [];
     const skipped: Array<{ startTime: Date; reason: string }> = [];
 
     for (const candidate of candidates) {
-      if (await this.checkConflict(dto.screenId, candidate.startTime, candidate.endTime)) {
+      if (
+        await this.checkConflict(
+          dto.screenId,
+          candidate.startTime,
+          candidate.endTime,
+        )
+      ) {
         skipped.push({ startTime: candidate.startTime, reason: '시간 충돌' });
         continue;
       }
@@ -150,15 +168,18 @@ export class AdminScreeningsService {
         ...(cinemaId && { screen: { cinemaId } }),
         ...(screenId && { screenId }),
         ...(movieId && { movieId }),
-        ...(filter.startDate && filter.endDate && {
-          startTime: {
-            gte: new Date(filter.startDate),
-            lte: new Date(filter.endDate),
-          },
-        }),
+        ...(filter.startDate &&
+          filter.endDate && {
+            startTime: {
+              gte: new Date(filter.startDate),
+              lte: new Date(filter.endDate),
+            },
+          }),
       },
       include: {
-        movie: { select: { id: true, title: true, runtime: true, posterUrl: true } },
+        movie: {
+          select: { id: true, title: true, runtime: true, posterUrl: true },
+        },
         screen: { include: { cinema: true, screenType: true } },
         _count: { select: { reservations: true } },
       },

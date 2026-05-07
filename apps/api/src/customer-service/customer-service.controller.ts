@@ -3,7 +3,9 @@ import { CustomerServiceService } from './customer-service.service';
 
 @Controller('cs')
 export class CustomerServiceController {
-  constructor(private readonly customerServiceService: CustomerServiceService) {}
+  constructor(
+    private readonly customerServiceService: CustomerServiceService,
+  ) {}
 
   // GET /cs/faqs?category=CINEMA_USAGE
   @Get('faqs')

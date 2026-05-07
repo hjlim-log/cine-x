@@ -28,7 +28,8 @@ export class PaymentsService {
         partnerDiscountUsage: { include: { partnerDiscount: true } },
       },
     });
-    if (!reservation) throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
+    if (!reservation)
+      throw new NotFoundException('예매 내역을 찾을 수 없습니다.');
     if (reservation.customerId !== customerId) {
       throw new ForbiddenException('결제 권한이 없습니다.');
     }
@@ -48,7 +49,11 @@ export class PaymentsService {
         Authorization: `Basic ${encoded}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ paymentKey, orderId, amount: reservation.totalAmount }),
+      body: JSON.stringify({
+        paymentKey,
+        orderId,
+        amount: reservation.totalAmount,
+      }),
     });
 
     const tossData = await tossRes.json().catch(() => null);
@@ -79,12 +84,17 @@ export class PaymentsService {
         partnerDiscountName: partner.partnerName,
         tossMethod: tossData?.method,
         tossIssuerCode: issuerCode,
-        tossIssuerName: issuerCode ? (TOSS_CARD_CODES[issuerCode] ?? '알 수 없음') : null,
+        tossIssuerName: issuerCode
+          ? (TOSS_CARD_CODES[issuerCode] ?? '알 수 없음')
+          : null,
         matched,
       });
 
       if (!matched) {
-        const cancelled = await this.cancelTossPayment(tossData.paymentKey, '제휴할인 카드사 불일치');
+        const cancelled = await this.cancelTossPayment(
+          tossData.paymentKey,
+          '제휴할인 카드사 불일치',
+        );
 
         if (!cancelled) {
           // 환불 실패 — 결제는 됐지만 취소 불가, FAILED로 표시 후 고객센터 안내
@@ -103,7 +113,9 @@ export class PaymentsService {
             `${partner.partnerName} 할인이 적용되었으나 카드 외 결제수단으로 결제되었습니다. 결제가 자동 취소되었습니다.`,
           );
         }
-        const usedCard = issuerCode ? (TOSS_CARD_CODES[issuerCode] ?? '알 수 없는 카드') : '알 수 없는 카드';
+        const usedCard = issuerCode
+          ? (TOSS_CARD_CODES[issuerCode] ?? '알 수 없는 카드')
+          : '알 수 없는 카드';
         throw new BadRequestException(
           `${partner.partnerName} 할인이 적용되었으나 ${usedCard}로 결제되었습니다. ` +
             `결제가 자동 취소되었으니 ${partner.partnerName}로 다시 결제해주세요.`,
@@ -112,29 +124,34 @@ export class PaymentsService {
     }
 
     // 결제 성공: reservation PAID + coupon USED + 멤버십 누적 원자적 처리
-    const { updated, membershipResult } = await this.prisma.$transaction(async (tx) => {
-      const r = await tx.reservation.update({
-        where: { id: reservation.id },
-        data: { status: 'PAID', paymentKey, paidAt: new Date() },
-      });
-      if (reservation.couponUsage) {
-        await tx.userCoupon.update({
-          where: { id: reservation.couponUsage.userCouponId },
-          data: { status: 'USED', usedAt: new Date() },
+    const { updated, membershipResult } = await this.prisma.$transaction(
+      async (tx) => {
+        const r = await tx.reservation.update({
+          where: { id: reservation.id },
+          data: { status: 'PAID', paymentKey, paidAt: new Date() },
         });
-      }
-      const membership = await this.membershipService.addToTotalAmount(
-        tx,
-        reservation.customerId,
-        reservation.totalAmount,
-      );
-      return { updated: r, membershipResult: membership };
-    });
+        if (reservation.couponUsage) {
+          await tx.userCoupon.update({
+            where: { id: reservation.couponUsage.userCouponId },
+            data: { status: 'USED', usedAt: new Date() },
+          });
+        }
+        const membership = await this.membershipService.addToTotalAmount(
+          tx,
+          reservation.customerId,
+          reservation.totalAmount,
+        );
+        return { updated: r, membershipResult: membership };
+      },
+    );
 
     return { reservationId: updated.id, status: 'PAID', membershipResult };
   }
 
-  private async cancelTossPayment(paymentKey: string, reason: string): Promise<boolean> {
+  private async cancelTossPayment(
+    paymentKey: string,
+    reason: string,
+  ): Promise<boolean> {
     const secretKey = process.env.TOSS_SECRET_KEY ?? '';
     const encoded = Buffer.from(`${secretKey}:`).toString('base64');
 

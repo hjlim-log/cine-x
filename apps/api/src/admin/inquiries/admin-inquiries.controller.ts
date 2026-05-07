@@ -19,10 +19,7 @@ export class AdminInquiriesController {
   constructor(private readonly service: AdminInquiriesService) {}
 
   @Get()
-  list(
-    @Query('status') status?: string,
-    @Query('type') type?: string,
-  ) {
+  list(@Query('status') status?: string, @Query('type') type?: string) {
     return this.service.list({ status, type });
   }
 
@@ -32,10 +29,7 @@ export class AdminInquiriesController {
   }
 
   @Patch(':id/answer')
-  answer(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AnswerInquiryDto,
-  ) {
+  answer(@Param('id', ParseIntPipe) id: number, @Body() dto: AnswerInquiryDto) {
     return this.service.answer(id, dto);
   }
 }

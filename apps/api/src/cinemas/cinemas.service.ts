@@ -10,7 +10,10 @@ export class CinemasService {
       include: { _count: { select: { screens: true } } },
       orderBy: [{ region: 'asc' }, { name: 'asc' }],
     });
-    return cinemas.map(({ _count, ...c }) => ({ ...c, screenCount: _count.screens }));
+    return cinemas.map(({ _count, ...c }) => ({
+      ...c,
+      screenCount: _count.screens,
+    }));
   }
 
   async findOne(id: number) {

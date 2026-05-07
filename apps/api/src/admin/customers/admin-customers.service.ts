@@ -43,7 +43,9 @@ export class AdminCustomersService {
       this.prisma.customer.findMany({
         where,
         include: {
-          membershipGrade: { select: { name: true, displayName: true, bgColor: true } },
+          membershipGrade: {
+            select: { name: true, displayName: true, bgColor: true },
+          },
           _count: {
             select: {
               reservations: true,
@@ -114,17 +116,30 @@ export class AdminCustomersService {
 
     if (!customer) throw new NotFoundException('회원을 찾을 수 없습니다.');
 
-    const [totalReservations, paidReservations, totalCoupons, availableCoupons] =
-      await this.prisma.$transaction([
-        this.prisma.reservation.count({ where: { customerId: id } }),
-        this.prisma.reservation.count({ where: { customerId: id, status: 'PAID' } }),
-        this.prisma.userCoupon.count({ where: { customerId: id } }),
-        this.prisma.userCoupon.count({ where: { customerId: id, status: 'AVAILABLE' } }),
-      ]);
+    const [
+      totalReservations,
+      paidReservations,
+      totalCoupons,
+      availableCoupons,
+    ] = await this.prisma.$transaction([
+      this.prisma.reservation.count({ where: { customerId: id } }),
+      this.prisma.reservation.count({
+        where: { customerId: id, status: 'PAID' },
+      }),
+      this.prisma.userCoupon.count({ where: { customerId: id } }),
+      this.prisma.userCoupon.count({
+        where: { customerId: id, status: 'AVAILABLE' },
+      }),
+    ]);
 
     return {
       ...customer,
-      stats: { totalReservations, paidReservations, totalCoupons, availableCoupons },
+      stats: {
+        totalReservations,
+        paidReservations,
+        totalCoupons,
+        availableCoupons,
+      },
     };
   }
 
@@ -178,8 +193,10 @@ export class AdminCustomersService {
   async deactivate(id: number, dto: DeactivateDto) {
     const customer = await this.prisma.customer.findUnique({ where: { id } });
     if (!customer) throw new NotFoundException('회원을 찾을 수 없습니다.');
-    if (!customer.isActive) throw new BadRequestException('이미 비활성화된 회원입니다.');
-    if (customer.role === 'ADMIN') throw new ForbiddenException('관리자 계정은 비활성화할 수 없습니다.');
+    if (!customer.isActive)
+      throw new BadRequestException('이미 비활성화된 회원입니다.');
+    if (customer.role === 'ADMIN')
+      throw new ForbiddenException('관리자 계정은 비활성화할 수 없습니다.');
 
     return this.prisma.customer.update({
       where: { id },
@@ -195,7 +212,8 @@ export class AdminCustomersService {
   async reactivate(id: number) {
     const customer = await this.prisma.customer.findUnique({ where: { id } });
     if (!customer) throw new NotFoundException('회원을 찾을 수 없습니다.');
-    if (customer.isActive) throw new BadRequestException('이미 활성화된 회원입니다.');
+    if (customer.isActive)
+      throw new BadRequestException('이미 활성화된 회원입니다.');
 
     return this.prisma.customer.update({
       where: { id },

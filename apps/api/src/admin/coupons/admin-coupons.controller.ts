@@ -38,10 +38,7 @@ export class AdminCouponsController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateCouponDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCouponDto) {
     return this.service.update(id, dto);
   }
 

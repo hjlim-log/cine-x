@@ -133,7 +133,10 @@ export class PricingService {
       if (!userCoupon || userCoupon.customerId !== input.customerId) {
         throw new ForbiddenException('보유하지 않은 쿠폰입니다.');
       }
-      if (userCoupon.status !== 'AVAILABLE' && userCoupon.status !== 'RESERVED') {
+      if (
+        userCoupon.status !== 'AVAILABLE' &&
+        userCoupon.status !== 'RESERVED'
+      ) {
         throw new BadRequestException(
           `사용할 수 없는 쿠폰입니다 (${userCoupon.status}).`,
         );
@@ -205,7 +208,9 @@ export class PricingService {
 
       const grade = customer?.membershipGrade;
       if (grade && grade.discountPercent > 0) {
-        let calculated = Math.floor((afterCouponAmount * grade.discountPercent) / 100);
+        let calculated = Math.floor(
+          (afterCouponAmount * grade.discountPercent) / 100,
+        );
         if (grade.maxDiscount && calculated > grade.maxDiscount) {
           calculated = grade.maxDiscount;
         }
@@ -242,7 +247,9 @@ export class PricingService {
       }
 
       if (input.userCouponId && !pd.combinableWithCoupon) {
-        throw new BadRequestException('쿠폰과 함께 사용할 수 없는 제휴할인입니다.');
+        throw new BadRequestException(
+          '쿠폰과 함께 사용할 수 없는 제휴할인입니다.',
+        );
       }
 
       if (afterMembershipAmount < pd.minPurchase) {
@@ -254,7 +261,9 @@ export class PricingService {
       if (pd.discountMethod === 'AMOUNT') {
         partnerDiscount = pd.discountValue;
       } else if (pd.discountMethod === 'PERCENT') {
-        let calculated = Math.floor((afterMembershipAmount * pd.discountValue) / 100);
+        let calculated = Math.floor(
+          (afterMembershipAmount * pd.discountValue) / 100,
+        );
         if (pd.maxDiscount && calculated > pd.maxDiscount) {
           calculated = pd.maxDiscount;
         }

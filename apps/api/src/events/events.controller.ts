@@ -62,5 +62,4 @@ export class EventsController {
   ) {
     return this.eventsService.apply(user.id, id);
   }
-
 }

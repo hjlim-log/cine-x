@@ -30,8 +30,10 @@ export class AdminCouponsService {
       const couponStats = stats.filter((s) => s.couponId === c.id);
       const issued = couponStats.reduce((sum, s) => sum + s._count, 0);
       const used = couponStats.find((s) => s.status === 'USED')?._count ?? 0;
-      const available = couponStats.find((s) => s.status === 'AVAILABLE')?._count ?? 0;
-      const expired = couponStats.find((s) => s.status === 'EXPIRED')?._count ?? 0;
+      const available =
+        couponStats.find((s) => s.status === 'AVAILABLE')?._count ?? 0;
+      const expired =
+        couponStats.find((s) => s.status === 'EXPIRED')?._count ?? 0;
 
       return { ...c, stats: { issued, used, available, expired } };
     });
@@ -51,7 +53,8 @@ export class AdminCouponsService {
     });
     const issued = statsRows.reduce((sum, s) => sum + s._count, 0);
     const used = statsRows.find((s) => s.status === 'USED')?._count ?? 0;
-    const available = statsRows.find((s) => s.status === 'AVAILABLE')?._count ?? 0;
+    const available =
+      statsRows.find((s) => s.status === 'AVAILABLE')?._count ?? 0;
     const expired = statsRows.find((s) => s.status === 'EXPIRED')?._count ?? 0;
 
     return { ...coupon, stats: { issued, used, available, expired } };
@@ -92,10 +95,16 @@ export class AdminCouponsService {
     }
 
     const alreadyHas = await this.prisma.userCoupon.findFirst({
-      where: { customerId: customer.id, couponId: coupon.id, status: 'AVAILABLE' },
+      where: {
+        customerId: customer.id,
+        couponId: coupon.id,
+        status: 'AVAILABLE',
+      },
     });
     if (alreadyHas) {
-      throw new BadRequestException(`${dto.email}은(는) 이미 해당 쿠폰을 보유하고 있습니다.`);
+      throw new BadRequestException(
+        `${dto.email}은(는) 이미 해당 쿠폰을 보유하고 있습니다.`,
+      );
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -103,7 +112,9 @@ export class AdminCouponsService {
         data: {
           customerId: customer.id,
           couponId: coupon.id,
-          expiresAt: new Date(Date.now() + coupon.validDays * 24 * 60 * 60 * 1000),
+          expiresAt: new Date(
+            Date.now() + coupon.validDays * 24 * 60 * 60 * 1000,
+          ),
         },
         include: { coupon: true },
       });
@@ -186,7 +197,9 @@ export class AdminCouponsService {
         };
       }
 
-      const expiresAt = new Date(Date.now() + coupon.validDays * 24 * 60 * 60 * 1000);
+      const expiresAt = new Date(
+        Date.now() + coupon.validDays * 24 * 60 * 60 * 1000,
+      );
 
       await tx.userCoupon.createMany({
         data: targetIds.map((customerId) => ({

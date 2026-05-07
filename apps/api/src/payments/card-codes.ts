@@ -28,7 +28,10 @@ export const TOSS_CARD_CODES: Record<string, string> = {
   '71': '우체국예금보험',
 };
 
-export function matchCardIssuer(tossIssuerCode: string, partnerName: string): boolean {
+export function matchCardIssuer(
+  tossIssuerCode: string,
+  partnerName: string,
+): boolean {
   const tossIssuerName = TOSS_CARD_CODES[tossIssuerCode];
   if (!tossIssuerName) return false;
 

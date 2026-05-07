@@ -42,10 +42,20 @@ export class MembershipService {
         await this.issueGradeRewards(tx, customerId, newGrade.id);
       }
 
-      return { oldGrade: oldGradeName, newGrade: newGrade.name, upgraded: direction === 'UP', totalAmount: newTotal };
+      return {
+        oldGrade: oldGradeName,
+        newGrade: newGrade.name,
+        upgraded: direction === 'UP',
+        totalAmount: newTotal,
+      };
     }
 
-    return { oldGrade: oldGradeName, newGrade: oldGradeName, upgraded: false, totalAmount: newTotal };
+    return {
+      oldGrade: oldGradeName,
+      newGrade: oldGradeName,
+      upgraded: false,
+      totalAmount: newTotal,
+    };
   }
 
   async subtractFromTotalAmount(tx: Tx, customerId: number, amount: number) {
@@ -56,7 +66,9 @@ export class MembershipService {
     const customer = await this.prisma.customer.findUniqueOrThrow({
       where: { id: customerId },
       include: {
-        membershipGrade: { include: { rewards: { include: { coupon: true } } } },
+        membershipGrade: {
+          include: { rewards: { include: { coupon: true } } },
+        },
         membershipHistory: { orderBy: { changedAt: 'desc' }, take: 10 },
       },
     });
@@ -70,7 +82,9 @@ export class MembershipService {
       currentGrade: customer.membershipGrade,
       totalAmount: customer.totalAmount,
       nextGrade,
-      amountToNext: nextGrade ? nextGrade.minAmount - customer.totalAmount : null,
+      amountToNext: nextGrade
+        ? nextGrade.minAmount - customer.totalAmount
+        : null,
       history: customer.membershipHistory,
     };
   }
@@ -92,7 +106,10 @@ export class MembershipService {
     });
   }
 
-  private compareGrades(oldName: string, newName: string): 'UP' | 'SAME' | 'DOWN' {
+  private compareGrades(
+    oldName: string,
+    newName: string,
+  ): 'UP' | 'SAME' | 'DOWN' {
     const oldIdx = GRADE_ORDER.indexOf(oldName);
     const newIdx = GRADE_ORDER.indexOf(newName);
     if (newIdx > oldIdx) return 'UP';
@@ -112,7 +129,9 @@ export class MembershipService {
           data: {
             customerId,
             couponId: reward.couponId,
-            expiresAt: new Date(Date.now() + reward.coupon.validDays * 24 * 60 * 60 * 1000),
+            expiresAt: new Date(
+              Date.now() + reward.coupon.validDays * 24 * 60 * 60 * 1000,
+            ),
           },
         });
         await tx.coupon.update({

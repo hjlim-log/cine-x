@@ -24,10 +24,7 @@ export class ReservationsController {
   constructor(private readonly reservationsService: ReservationsService) {}
 
   @Post()
-  create(
-    @GetUser() user: { id: number },
-    @Body() dto: CreateReservationDto,
-  ) {
+  create(@GetUser() user: { id: number }, @Body() dto: CreateReservationDto) {
     return this.reservationsService.create(user.id, dto);
   }
 
@@ -58,6 +55,10 @@ export class ReservationsController {
     @GetUser() user: { id: number },
     @Body() dto: ApplyPartnerDiscountDto,
   ) {
-    return this.reservationsService.applyPartnerDiscount(id, user.id, dto.partnerDiscountId);
+    return this.reservationsService.applyPartnerDiscount(
+      id,
+      user.id,
+      dto.partnerDiscountId,
+    );
   }
 }

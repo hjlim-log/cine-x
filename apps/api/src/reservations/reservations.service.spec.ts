@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ReservationsService } from './reservations.service';
 import { PricingService } from '../pricing/pricing.service';
@@ -73,7 +77,12 @@ async function createRawReservation(
 beforeAll(async () => {
   const module: TestingModule = await Test.createTestingModule({
     imports: [ScheduleModule.forRoot()],
-    providers: [ReservationsService, PricingService, MembershipService, PrismaService],
+    providers: [
+      ReservationsService,
+      PricingService,
+      MembershipService,
+      PrismaService,
+    ],
   }).compile();
 
   service = module.get(ReservationsService);
@@ -107,17 +116,31 @@ beforeAll(async () => {
   });
 
   const cinema = await prisma.cinema.create({
-    data: { name: `테스트시네마_${Date.now()}`, address: '서울 강남구', region: '서울' },
+    data: {
+      name: `테스트시네마_${Date.now()}`,
+      address: '서울 강남구',
+      region: '서울',
+    },
   });
 
   const screen = await prisma.screen.create({
-    data: { name: 'TEST_1관', totalSeats: 5, cinemaId: cinema.id, screenTypeId: screenType.id },
+    data: {
+      name: 'TEST_1관',
+      totalSeats: 5,
+      cinemaId: cinema.id,
+      screenTypeId: screenType.id,
+    },
   });
 
   const seats = await Promise.all(
     [1, 2, 3, 4, 5].map((num) =>
       prisma.seat.create({
-        data: { row: 'A', number: num, screenId: screen.id, seatTypeId: seatType.id },
+        data: {
+          row: 'A',
+          number: num,
+          screenId: screen.id,
+          seatTypeId: seatType.id,
+        },
       }),
     ),
   );
@@ -175,13 +198,23 @@ afterEach(async () => {
   const ids = testCustomers.map((c) => c.id);
   if (ids.length === 0) return;
 
-  await prisma.couponUsage.deleteMany({ where: { reservation: { customerId: { in: ids } } } });
-  await prisma.partnerDiscountUsage.deleteMany({ where: { reservation: { customerId: { in: ids } } } });
-  await prisma.ticket.deleteMany({ where: { reservation: { customerId: { in: ids } } } });
+  await prisma.couponUsage.deleteMany({
+    where: { reservation: { customerId: { in: ids } } },
+  });
+  await prisma.partnerDiscountUsage.deleteMany({
+    where: { reservation: { customerId: { in: ids } } },
+  });
+  await prisma.ticket.deleteMany({
+    where: { reservation: { customerId: { in: ids } } },
+  });
   await prisma.reservation.deleteMany({ where: { customerId: { in: ids } } });
   await prisma.userCoupon.deleteMany({ where: { customerId: { in: ids } } });
-  await prisma.membershipHistory.deleteMany({ where: { customerId: { in: ids } } });
-  await prisma.customer.deleteMany({ where: { email: { contains: '@test.local' } } });
+  await prisma.membershipHistory.deleteMany({
+    where: { customerId: { in: ids } },
+  });
+  await prisma.customer.deleteMany({
+    where: { email: { contains: '@test.local' } },
+  });
 });
 
 afterAll(async () => {
@@ -194,13 +227,21 @@ afterAll(async () => {
   await prisma.pricingPolicy.deleteMany({
     where: { screenType: { name: 'TEST_일반관' } },
   });
-  await prisma.ticket.deleteMany({ where: { seat: { screen: { name: 'TEST_1관' } } } });
-  await prisma.reservation.deleteMany({ where: { screening: { screen: { name: 'TEST_1관' } } } });
-  await prisma.screening.deleteMany({ where: { screen: { name: 'TEST_1관' } } });
+  await prisma.ticket.deleteMany({
+    where: { seat: { screen: { name: 'TEST_1관' } } },
+  });
+  await prisma.reservation.deleteMany({
+    where: { screening: { screen: { name: 'TEST_1관' } } },
+  });
+  await prisma.screening.deleteMany({
+    where: { screen: { name: 'TEST_1관' } },
+  });
   await prisma.seat.deleteMany({ where: { screen: { name: 'TEST_1관' } } });
   await prisma.movie.deleteMany({ where: { title: 'TEST_영화' } });
   await prisma.screen.deleteMany({ where: { name: 'TEST_1관' } });
-  await prisma.cinema.deleteMany({ where: { name: { startsWith: '테스트시네마_' } } });
+  await prisma.cinema.deleteMany({
+    where: { name: { startsWith: '테스트시네마_' } },
+  });
   await prisma.screenType.deleteMany({ where: { name: 'TEST_일반관' } });
   await prisma.seatType.deleteMany({ where: { name: 'TEST_일반석' } });
   await prisma.membershipGrade.deleteMany({ where: { name: 'TEST_WELCOME' } });
@@ -233,7 +274,7 @@ describe('좌석 충돌 방지 (Serializable 트랜잭션)', () => {
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
 
-    const reason = (rejected[0] as PromiseRejectedResult).reason;
+    const reason = rejected[0].reason;
     expect(reason).toBeInstanceOf(ConflictException);
     expect(reason.message).toContain('이미 예매된 좌석');
   }, 15000);
@@ -285,7 +326,9 @@ describe('좌석 충돌 방지 (Serializable 트랜잭션)', () => {
 describe('PENDING 만료 처리 (expirePendingReservations)', () => {
   it('10분 초과 PENDING → EXPIRED', async () => {
     const user = await createTestCustomer('expire-test@test.local');
-    const reservation = await createRawReservation(user.id, [seedData.seatIds[0]]);
+    const reservation = await createRawReservation(user.id, [
+      seedData.seatIds[0],
+    ]);
 
     // 11분 전으로 강제 조작
     await prisma.reservation.update({
@@ -295,17 +338,23 @@ describe('PENDING 만료 처리 (expirePendingReservations)', () => {
 
     await service.expirePendingReservations();
 
-    const updated = await prisma.reservation.findUnique({ where: { id: reservation.id } });
+    const updated = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+    });
     expect(updated?.status).toBe('EXPIRED');
   });
 
   it('10분 미만 PENDING은 만료 대상 아님', async () => {
     const user = await createTestCustomer('fresh-pending@test.local');
-    const reservation = await createRawReservation(user.id, [seedData.seatIds[0]]);
+    const reservation = await createRawReservation(user.id, [
+      seedData.seatIds[0],
+    ]);
 
     await service.expirePendingReservations();
 
-    const unchanged = await prisma.reservation.findUnique({ where: { id: reservation.id } });
+    const unchanged = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+    });
     expect(unchanged?.status).toBe('PENDING');
   });
 
@@ -322,7 +371,9 @@ describe('PENDING 만료 처리 (expirePendingReservations)', () => {
       },
     });
 
-    const reservation = await createRawReservation(user.id, [seedData.seatIds[0]]);
+    const reservation = await createRawReservation(user.id, [
+      seedData.seatIds[0],
+    ]);
     await prisma.couponUsage.create({
       data: {
         userCouponId: userCoupon.id,
@@ -339,13 +390,19 @@ describe('PENDING 만료 처리 (expirePendingReservations)', () => {
 
     await service.expirePendingReservations();
 
-    const refreshedCoupon = await prisma.userCoupon.findUnique({ where: { id: userCoupon.id } });
+    const refreshedCoupon = await prisma.userCoupon.findUnique({
+      where: { id: userCoupon.id },
+    });
     expect(refreshedCoupon?.status).toBe('AVAILABLE');
 
-    const usage = await prisma.couponUsage.findFirst({ where: { userCouponId: userCoupon.id } });
+    const usage = await prisma.couponUsage.findFirst({
+      where: { userCouponId: userCoupon.id },
+    });
     expect(usage).toBeNull();
 
-    const expiredRes = await prisma.reservation.findUnique({ where: { id: reservation.id } });
+    const expiredRes = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+    });
     expect(expiredRes?.status).toBe('EXPIRED');
   });
 });
@@ -354,7 +411,10 @@ describe('PENDING 만료 처리 (expirePendingReservations)', () => {
 describe('취소 처리 (cancel)', () => {
   it('PAID 취소 → 멤버십 누적금액 차감', async () => {
     // 125,000원 누적 + 50,000원 결제 예매를 취소하면 → 75,000원 남아야 함
-    const user = await createTestCustomer('cancel-membership@test.local', 125000);
+    const user = await createTestCustomer(
+      'cancel-membership@test.local',
+      125000,
+    );
     const reservation = await createRawReservation(
       user.id,
       [seedData.seatIds[0]],
@@ -364,10 +424,14 @@ describe('취소 처리 (cancel)', () => {
 
     await service.cancel(reservation.id, user.id);
 
-    const updated = await prisma.customer.findUnique({ where: { id: user.id } });
+    const updated = await prisma.customer.findUnique({
+      where: { id: user.id },
+    });
     expect(updated?.totalAmount).toBe(75000);
 
-    const cancelled = await prisma.reservation.findUnique({ where: { id: reservation.id } });
+    const cancelled = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+    });
     expect(cancelled?.status).toBe('CANCELLED');
   });
 
@@ -384,7 +448,12 @@ describe('취소 처리 (cancel)', () => {
       },
     });
 
-    const reservation = await createRawReservation(user.id, [seedData.seatIds[0]], 'PAID', 10000);
+    const reservation = await createRawReservation(
+      user.id,
+      [seedData.seatIds[0]],
+      'PAID',
+      10000,
+    );
     await prisma.couponUsage.create({
       data: {
         userCouponId: userCoupon.id,
@@ -395,38 +464,62 @@ describe('취소 처리 (cancel)', () => {
 
     await service.cancel(reservation.id, user.id);
 
-    const refreshed = await prisma.userCoupon.findUnique({ where: { id: userCoupon.id } });
+    const refreshed = await prisma.userCoupon.findUnique({
+      where: { id: userCoupon.id },
+    });
     expect(refreshed?.status).toBe('AVAILABLE');
 
-    const usage = await prisma.couponUsage.findFirst({ where: { userCouponId: userCoupon.id } });
+    const usage = await prisma.couponUsage.findFirst({
+      where: { userCouponId: userCoupon.id },
+    });
     expect(usage).toBeNull();
   });
 
   it('PENDING 취소 → 멤버십 차감 없이 CANCELLED', async () => {
     const user = await createTestCustomer('cancel-pending@test.local', 50000);
-    const reservation = await createRawReservation(user.id, [seedData.seatIds[0]], 'PENDING');
+    const reservation = await createRawReservation(
+      user.id,
+      [seedData.seatIds[0]],
+      'PENDING',
+    );
 
     await service.cancel(reservation.id, user.id);
 
-    const updatedUser = await prisma.customer.findUnique({ where: { id: user.id } });
+    const updatedUser = await prisma.customer.findUnique({
+      where: { id: user.id },
+    });
     expect(updatedUser?.totalAmount).toBe(50000); // 변동 없음
 
-    const cancelled = await prisma.reservation.findUnique({ where: { id: reservation.id } });
+    const cancelled = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+    });
     expect(cancelled?.status).toBe('CANCELLED');
   });
 
   it('타인의 예매 취소 시도 → ForbiddenException', async () => {
     const owner = await createTestCustomer('owner@test.local');
     const attacker = await createTestCustomer('attacker@test.local');
-    const reservation = await createRawReservation(owner.id, [seedData.seatIds[0]], 'PAID');
+    const reservation = await createRawReservation(
+      owner.id,
+      [seedData.seatIds[0]],
+      'PAID',
+    );
 
-    await expect(service.cancel(reservation.id, attacker.id)).rejects.toThrow(ForbiddenException);
+    await expect(service.cancel(reservation.id, attacker.id)).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 
   it('EXPIRED 예매 취소 시도 → BadRequestException', async () => {
     const user = await createTestCustomer('expired-cancel@test.local');
-    const reservation = await createRawReservation(user.id, [seedData.seatIds[0]], 'EXPIRED');
+    const reservation = await createRawReservation(
+      user.id,
+      [seedData.seatIds[0]],
+      'EXPIRED',
+    );
 
-    await expect(service.cancel(reservation.id, user.id)).rejects.toThrow(BadRequestException);
+    await expect(service.cancel(reservation.id, user.id)).rejects.toThrow(
+      BadRequestException,
+    );
   });
 });

@@ -22,7 +22,8 @@ export class ScreeningsService {
         },
       },
     });
-    if (!screening) throw new NotFoundException('상영 정보를 찾을 수 없습니다.');
+    if (!screening)
+      throw new NotFoundException('상영 정보를 찾을 수 없습니다.');
 
     // PAID 또는 만료되지 않은 PENDING이 점유한 좌석만 잠금
     // EXPIRED·CANCELLED·10분 초과 PENDING 좌석은 다시 예약 가능
@@ -37,11 +38,20 @@ export class ScreeningsService {
       },
       include: { tickets: { select: { seatId: true } } },
     });
-    const bookedSeatIds = activeReservations.flatMap((r) => r.tickets.map((t) => t.seatId));
+    const bookedSeatIds = activeReservations.flatMap((r) =>
+      r.tickets.map((t) => t.seatId),
+    );
 
     // screenType → type, seatType → type 으로 rename (Prisma 관계명 정리)
-    const { screenType: screenTypeObj, seats: rawSeats, ...screenFields } = screening.screen;
-    const seats = rawSeats.map(({ seatType, ...seatFields }) => ({ ...seatFields, type: seatType }));
+    const {
+      screenType: screenTypeObj,
+      seats: rawSeats,
+      ...screenFields
+    } = screening.screen;
+    const seats = rawSeats.map(({ seatType, ...seatFields }) => ({
+      ...seatFields,
+      type: seatType,
+    }));
 
     return {
       ...screening,

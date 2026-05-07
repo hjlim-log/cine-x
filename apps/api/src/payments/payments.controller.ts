@@ -10,10 +10,7 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('confirm')
-  confirm(
-    @GetUser() user: { id: number },
-    @Body() dto: ConfirmPaymentDto,
-  ) {
+  confirm(@GetUser() user: { id: number }, @Body() dto: ConfirmPaymentDto) {
     return this.paymentsService.confirm(user.id, dto);
   }
 }

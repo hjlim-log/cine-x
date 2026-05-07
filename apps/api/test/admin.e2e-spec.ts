@@ -13,7 +13,7 @@ let adminToken: string;
 let userToken: string;
 
 const infraIds = {
-  testGradeId: 0,       // E2E_ADMIN_VIP (bulk issue 대상 고객용)
+  testGradeId: 0, // E2E_ADMIN_VIP (bulk issue 대상 고객용)
   testCustomerIds: [] as number[],
   couponId: 0,
   cinemaId: 0,
@@ -42,7 +42,9 @@ beforeAll(async () => {
   }).compile();
 
   app = module.createNestApplication();
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+  );
   await app.init();
   prisma = app.get(PrismaService);
 
@@ -113,7 +115,12 @@ beforeAll(async () => {
     const c = await prisma.customer.upsert({
       where: { email },
       update: { gradeId: testGrade.id },
-      create: { email, password: hash, name: email.split('@')[0], gradeId: testGrade.id },
+      create: {
+        email,
+        password: hash,
+        name: email.split('@')[0],
+        gradeId: testGrade.id,
+      },
     });
     infraIds.testCustomerIds.push(c.id);
   }
@@ -153,12 +160,21 @@ beforeAll(async () => {
   infraIds.screenTypeId = screenType.id;
 
   const cinema = await prisma.cinema.create({
-    data: { name: `E2E_ADMIN_시네마_${ts}`, address: '서울 강남구', region: '서울' },
+    data: {
+      name: `E2E_ADMIN_시네마_${ts}`,
+      address: '서울 강남구',
+      region: '서울',
+    },
   });
   infraIds.cinemaId = cinema.id;
 
   const screen = await prisma.screen.create({
-    data: { name: 'E2E_ADMIN_1관', totalSeats: 10, cinemaId: cinema.id, screenTypeId: screenType.id },
+    data: {
+      name: 'E2E_ADMIN_1관',
+      totalSeats: 10,
+      cinemaId: cinema.id,
+      screenTypeId: screenType.id,
+    },
   });
   infraIds.screenId = screen.id;
 }, 30000);
@@ -166,11 +182,17 @@ beforeAll(async () => {
 afterAll(async () => {
   // 상영 → 영화 (FK 역순)
   if (infraIds.createdScreeningIds.length > 0) {
-    await prisma.screening.deleteMany({ where: { id: { in: infraIds.createdScreeningIds } } });
+    await prisma.screening.deleteMany({
+      where: { id: { in: infraIds.createdScreeningIds } },
+    });
   }
   if (infraIds.createdMovieIds.length > 0) {
-    await prisma.movieGenre.deleteMany({ where: { movieId: { in: infraIds.createdMovieIds } } });
-    await prisma.movie.deleteMany({ where: { id: { in: infraIds.createdMovieIds } } });
+    await prisma.movieGenre.deleteMany({
+      where: { movieId: { in: infraIds.createdMovieIds } },
+    });
+    await prisma.movie.deleteMany({
+      where: { id: { in: infraIds.createdMovieIds } },
+    });
   }
 
   // 쿠폰
@@ -180,7 +202,9 @@ afterAll(async () => {
   await prisma.genre.deleteMany({ where: { name: infraIds.genreName } });
 
   // @admin-e2e.local 고객 → E2E_ADMIN_VIP 등급 순
-  await prisma.customer.deleteMany({ where: { email: { contains: '@admin-e2e.local' } } });
+  await prisma.customer.deleteMany({
+    where: { email: { contains: '@admin-e2e.local' } },
+  });
   await prisma.membershipGrade.deleteMany({ where: { name: 'E2E_ADMIN_VIP' } });
 
   // 상영관 인프라 (Screen → Cinema → ScreenType → SeatType)
@@ -277,7 +301,9 @@ describe('어드민 영화 CRUD', () => {
       .set('Authorization', `Bearer ${adminToken}`);
 
     expect(deleteRes.status).toBe(400);
-    expect(deleteRes.body.message).toContain('상영 스케줄이 있는 영화는 삭제할 수 없습니다');
+    expect(deleteRes.body.message).toContain(
+      '상영 스케줄이 있는 영화는 삭제할 수 없습니다',
+    );
   });
 });
 
@@ -293,7 +319,9 @@ describe('어드민 쿠폰 일괄 발급', () => {
     expect(res.body).toBeInstanceOf(Array);
     expect(res.body.length).toBeGreaterThanOrEqual(2);
 
-    const bulk1 = res.body.find((c: { email: string }) => c.email === 'bulk1@admin-e2e.local');
+    const bulk1 = res.body.find(
+      (c: { email: string }) => c.email === 'bulk1@admin-e2e.local',
+    );
     expect(bulk1).toBeDefined();
     expect(bulk1).toHaveProperty('alreadyHas', false); // 아직 발급 전
     expect(bulk1).toHaveProperty('email');
@@ -319,7 +347,7 @@ describe('어드민 쿠폰 일괄 발급', () => {
       .send({ couponId: infraIds.couponId, customerIds: [cust1Id, cust2Id] });
 
     expect(res.status).toBe(201);
-    expect(res.body.issued).toBe(1);  // cust2만 신규 발급
+    expect(res.body.issued).toBe(1); // cust2만 신규 발급
     expect(res.body.skipped).toBe(1); // cust1은 이미 보유 → 스킵
   });
 });
