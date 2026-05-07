@@ -66,8 +66,8 @@ function ApplySection({
       const app = await applyEvent(event.id, token);
       onApplied(app);
       toast(`응모 완료! 추첨은 ${formatDate(event.endDate)} 이후 진행됩니다.`, 'success');
-    } catch (e: any) {
-      const msg = e.message ?? '응모 중 오류가 발생했습니다.';
+    } catch (e: unknown) {
+      const msg = (e as Error).message ?? '응모 중 오류가 발생했습니다.';
       setApplyError(msg);
     } finally {
       setApplying(false);
@@ -179,15 +179,6 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
   const [myApplication, setMyApplication] = useState<EventApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const reload = (t: string | null) => {
-    getEvent(Number(params.id), t)
-      .then((data) => {
-        setEvent(data);
-        setMyApplication(data.myApplication ?? null);
-      })
-      .catch(() => setNotFound(true));
-  };
-
   useEffect(() => {
     const t = localStorage.getItem('token');
     setToken(t);

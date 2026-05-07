@@ -212,7 +212,7 @@ function BulkIssue({
   function toggleGrade(grade: string) {
     setGrades((prev) => {
       const next = new Set(prev);
-      next.has(grade) ? next.delete(grade) : next.add(grade);
+      if (next.has(grade)) { next.delete(grade); } else { next.add(grade); }
       return next;
     });
   }
@@ -268,7 +268,7 @@ function BulkIssue({
   function toggleRow(id: number) {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
       return next;
     });
   }

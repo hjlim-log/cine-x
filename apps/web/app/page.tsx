@@ -6,9 +6,6 @@ import { fetchMovies, fetchCinemas, fetchEvents } from '@/lib/api';
 import { CATEGORY_LABEL, formatPeriod, type EventItem } from '@/lib/events';
 import type { Movie, CinemaListItem } from '@/lib/types';
 
-const PLACEHOLDER = (title: string) =>
-  `https://placehold.co/300x450/27272a/ffffff.png?text=${encodeURIComponent(title)}`;
-
 export default async function HomePage() {
   const [movies, cinemas, ongoingEvents] = await Promise.all([
     fetchMovies().catch((): Movie[] => []),

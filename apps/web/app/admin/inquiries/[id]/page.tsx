@@ -126,8 +126,6 @@ export default function InquiryDetailPage() {
   }
 
   const isAnswered = inquiry.status === 'COMPLETED';
-  const showForm = !isAnswered || editMode;
-
   return (
     <div>
       {/* 헤더 */}

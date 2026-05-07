@@ -27,7 +27,7 @@ export default function CinemasPieChart({ data }: { data: CinemaItem[] }) {
           innerRadius={0}
           outerRadius={90}
           paddingAngle={2}
-          label={({ name, percent }) =>
+          label={({ percent }) =>
             percent > 0.05 ? `${(percent * 100).toFixed(0)}%` : ''
           }
           labelLine={{ stroke: '#475569', strokeWidth: 1 }}

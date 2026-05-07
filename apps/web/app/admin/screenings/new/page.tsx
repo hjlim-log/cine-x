@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import {
   adminListMovies,
   adminGetCinemasWithScreens,

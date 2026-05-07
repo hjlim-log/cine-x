@@ -69,7 +69,6 @@ export default function AdminScreeningBulkPage() {
   const [useCustom, setUseCustom] = useState(false);
   const [screenType, setScreenType] = useState<'2D' | '3D'>('2D');
 
-  const selectedMovie = movies.find((m) => m.id === Number(movieId));
   const selectedCinema = cinemas.find((c) => c.id === Number(cinemaId));
   const screens = selectedCinema?.screens ?? [];
 
