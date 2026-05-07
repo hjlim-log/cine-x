@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { randomUUID } from 'crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PricingService } from '../pricing/pricing.service';
 import { MembershipService } from '../membership/membership.service';
@@ -25,90 +26,99 @@ export class ReservationsService {
   async create(customerId: number, dto: CreateReservationDto) {
     const { screeningId, seatIds } = dto;
 
-    return this.prisma.$transaction(async (tx) => {
-      // 유효한 예매(PAID 또는 만료되지 않은 PENDING)가 점유한 좌석만 차단
-      const tenMinutesAgo = new Date(Date.now() - PENDING_TTL_MS);
-      const conflicts = await tx.ticket.findMany({
-        where: {
-          seatId: { in: seatIds },
-          reservation: {
+    try {
+      return await this.prisma.$transaction(
+        async (tx) => {
+          const tenMinutesAgo = new Date(Date.now() - PENDING_TTL_MS);
+          const conflicts = await tx.ticket.findMany({
+            where: {
+              seatId: { in: seatIds },
+              reservation: {
+                screeningId,
+                OR: [
+                  { status: 'PAID' },
+                  { status: 'PENDING', createdAt: { gte: tenMinutesAgo } },
+                ],
+              },
+            },
+          });
+          if (conflicts.length > 0) {
+            throw new ConflictException('이미 예매된 좌석이 포함되어 있습니다.');
+          }
+
+          const breakdown = await this.pricingService.calculate({
             screeningId,
-            OR: [
-              { status: 'PAID' },
-              { status: 'PENDING', createdAt: { gte: tenMinutesAgo } },
-            ],
-          },
+            seatIds,
+            audienceCounts: dto.audienceCounts,
+            userCouponId: dto.userCouponId,
+            customerId,
+            partnerDiscountId: dto.partnerDiscountId,
+          });
+
+          const reservation = await tx.reservation.create({
+            data: {
+              orderId: randomUUID(),
+              totalAmount: breakdown.totalAmount,
+              audienceCounts: dto.audienceCounts as Record<string, number>,
+              status: 'PENDING',
+              customerId,
+              screeningId,
+              tickets: {
+                create: seatIds.map((seatId) => ({ seatId, price: 0 })),
+              },
+            },
+            include: {
+              customer: { select: { email: true, name: true } },
+              tickets: { include: { seat: true } },
+              screening: {
+                include: {
+                  movie: true,
+                  screen: { include: { cinema: true } },
+                },
+              },
+            },
+          });
+
+          // 쿠폰 RESERVED 처리 (tx 안에서 AVAILABLE 재확인으로 동시 사용 방지)
+          if (dto.userCouponId) {
+            const uc = await tx.userCoupon.findUnique({ where: { id: dto.userCouponId } });
+            if (!uc || uc.status !== 'AVAILABLE') {
+              throw new ConflictException('이미 사용 중인 쿠폰입니다.');
+            }
+            await tx.userCoupon.update({
+              where: { id: dto.userCouponId },
+              data: { status: 'RESERVED' },
+            });
+            await tx.couponUsage.create({
+              data: {
+                userCouponId: dto.userCouponId,
+                reservationId: reservation.id,
+                discountAmount: breakdown.couponDiscount,
+              },
+            });
+          }
+
+          if (dto.partnerDiscountId && breakdown.partnerDiscount > 0) {
+            await tx.partnerDiscountUsage.create({
+              data: {
+                partnerDiscountId: dto.partnerDiscountId,
+                reservationId: reservation.id,
+                discountAmount: breakdown.partnerDiscount,
+              },
+            });
+          }
+
+          return reservation;
         },
-      });
-      if (conflicts.length > 0) {
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (e: unknown) {
+      // 직렬화 충돌(P2034): 동시 예매가 Serializable SSI에서 감지된 경우
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2034') {
         throw new ConflictException('이미 예매된 좌석이 포함되어 있습니다.');
       }
-
-      // 가격 계산 + 쿠폰/제휴할인 검증 (클라이언트 금액 일절 신뢰 안 함)
-      const breakdown = await this.pricingService.calculate({
-        screeningId,
-        seatIds,
-        audienceCounts: dto.audienceCounts,
-        userCouponId: dto.userCouponId,
-        customerId,
-        partnerDiscountId: dto.partnerDiscountId,
-      });
-
-      const reservation = await tx.reservation.create({
-        data: {
-          orderId: randomUUID(),
-          totalAmount: breakdown.totalAmount,
-          audienceCounts: dto.audienceCounts as Record<string, number>,
-          status: 'PENDING',
-          customerId,
-          screeningId,
-          tickets: {
-            create: seatIds.map((seatId) => ({ seatId, price: 0 })),
-          },
-        },
-        include: {
-          customer: { select: { email: true, name: true } },
-          tickets: { include: { seat: true } },
-          screening: {
-            include: {
-              movie: true,
-              screen: { include: { cinema: true } },
-            },
-          },
-        },
-      });
-
-      // 쿠폰 RESERVED 처리 (동시성 방지: tx 안에서 AVAILABLE 재확인)
-      if (dto.userCouponId) {
-        const uc = await tx.userCoupon.findUnique({ where: { id: dto.userCouponId } });
-        if (!uc || uc.status !== 'AVAILABLE') {
-          throw new ConflictException('이미 사용 중인 쿠폰입니다.');
-        }
-        await tx.userCoupon.update({
-          where: { id: dto.userCouponId },
-          data: { status: 'RESERVED' },
-        });
-        await tx.couponUsage.create({
-          data: {
-            userCouponId: dto.userCouponId,
-            reservationId: reservation.id,
-            discountAmount: breakdown.couponDiscount,
-          },
-        });
-      }
-
-      if (dto.partnerDiscountId && breakdown.partnerDiscount > 0) {
-        await tx.partnerDiscountUsage.create({
-          data: {
-            partnerDiscountId: dto.partnerDiscountId,
-            reservationId: reservation.id,
-            discountAmount: breakdown.partnerDiscount,
-          },
-        });
-      }
-
-      return reservation;
-    });
+      throw e;
+    }
   }
 
   async findOne(id: number, customerId: number) {

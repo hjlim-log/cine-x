@@ -213,6 +213,23 @@ pnpm dev
 - Frontend: http://localhost:3000
 - Backend: http://localhost:4000
 
+## 🛠 개발 도구
+
+```bash
+# 단위 테스트 (MembershipService, PricingService, ReservationsService)
+pnpm --filter api test
+
+# E2E 테스트 (예매·결제·관리자 시나리오)
+pnpm --filter api test:e2e
+
+# 커버리지 리포트 (apps/api/coverage/lcov-report/index.html)
+pnpm --filter api test:cov
+```
+
+> **PricingService 단위 테스트 커버리지: 99.19%** (37개 케이스 — 요금 정책, 쿠폰/멤버십/제휴 할인, 통합 시나리오)
+
+---
+
 ## 🔑 데모 계정
 
 ### 관리자 계정
