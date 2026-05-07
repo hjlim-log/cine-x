@@ -3,7 +3,7 @@
 [![CI](https://github.com/hjlim-log/cine-x/actions/workflows/ci.yml/badge.svg)](https://github.com/hjlim-log/cine-x/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> NestJS + Next.js로 만든 영화관 예매 풀스택 데모 사이트
+> NestJS + Next.js로 만든 영화관 예매 풀스택 데모 사이트 (PR CI 테스트)
 
 ## 📸 Demo
 
