@@ -28,3 +28,11 @@ Thumbs.db
 # Claude Code (로컬 개발 도구, 커밋 불필요)
 .claude/
 CLAUDE.md
+
+coverage/
+dist/
+build/
+
+coverage/
+dist/
+build/
